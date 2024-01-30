@@ -302,22 +302,24 @@ internal class Program
             Console.CursorLeft = 0;
             Console.WriteLine("===[ packet preview ]======================================================");
 
-            Console.WriteLine($"sampleRaw  : {packet.sampleRaw,-20}");
-            Console.WriteLine($"sampleSmth : {packet.sampleSmth,-20}");
+            Console.WriteLine($"sampleRaw  : {packet.sampleRaw,-20:F45}");
+            Console.WriteLine($"sampleSmth : {packet.sampleSmth,-20:F45}");
             Console.WriteLine($"samplePeak : {packet.samplePeak,-20}");
             for (var i = 0; i < packet.fftResult.Length; i++)
             {
                 string bar = new('#', (int)(packet.fftResult[i] / 4));
                 Console.WriteLine($"[{bar.PadRight(63, '-')}] {packet.fftResult[i],-3}  ");
             }
-            Console.WriteLine($"FFT_Magnitude : {packet.FFT_Magnitude,-20}");
-            Console.WriteLine($"FFT_MajorPeak : {packet.FFT_MajorPeak,-20}");
+            Console.WriteLine($"FFT_Magnitude : {packet.FFT_Magnitude,-20:F32}");
+            Console.WriteLine($"FFT_MajorPeak : {packet.FFT_MajorPeak,10:F4} (hz)                  ");
             Console.WriteLine();
 
             Console.WriteLine("===[ stats ]===============================================================");
             Console.WriteLine($"audioProcess: {audioProcessMs}ms    ");
             Console.WriteLine($"packetSend:   {packetSendMs}ms      ");
-            Console.WriteLine($"packetTiming: {packetTimingMs}ms    ");
+            Console.WriteLine($"packetTiming: {packetTimingMs}ms => {(packetTimingMs == 0 ? "" : 1000 / packetTimingMs):D} pps(fps)    ");
+
+            Thread.Sleep(10);
         }
 
         Console.CursorVisible = true;
