@@ -5,7 +5,7 @@ Feed windows audio output (in a processed form) to sound reactive wled instances
 [![Watch the video](https://img.youtube.com/vi/uMCMXIF_DOo/hqdefault.jpg)](https://www.youtube.com/embed/uMCMXIF_DOo)
 
 Right now this is merely a proof of concept running in the console.
-The final form for this project would be an easily installable windows service.
+The final form for this project would be an easily installable windows app that runs on the background (with a tray icon and some really simple UI and option to auto start with windows).
 
 ## Libraries
 - https://github.com/naudio/NAudio - for capturing the audio

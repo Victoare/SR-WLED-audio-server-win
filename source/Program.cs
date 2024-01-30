@@ -1,5 +1,4 @@
 ﻿using FftSharp;
-using Microsoft.Win32;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Net;
@@ -60,6 +59,7 @@ internal class Program
             return false;
         }
 
+        // NOTE: https://github.com/naudio/NAudio/issues/900 (WasapiLoopbackCapture WaveFormat conversion)
 
         Func<byte[], int, double> converter;
         switch (capture.WaveFormat.BitsPerSample)

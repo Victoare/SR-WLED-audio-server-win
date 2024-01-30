@@ -1,0 +1,38 @@
+﻿AutoRun (needs elevated rights)
+
+  RegistryKey registryKeyk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+  registryKeyk.SetValue("AppName", Application.ExecutablePath);
+
+
+UAC self-elevation (CSUACSelfElevation)
+https://github.com/microsoftarchive/msdn-code-gallery-microsoft/tree/master/OneCodeTeam/UAC%20self-elevation%20(CSUACSelfElevation)
+
+Elevated restart:
+
+"app.exe -SetRunOnLogon=true"  =>  main(){ if(arg -SetRunOnLogon=true){set registry, exit 0} }
+
+        private static void RunAsAdmin()
+        {
+            var path = Assembly.GetExecutingAssembly().Location;
+            using (var process = Process.Start(new ProcessStartInfo(path, "/run_elevated_action")
+            {
+                Verb = "runas"
+            }))
+            {
+                process?.WaitForExit();
+            }
+        }
+
+        private static void ElevatedAction()
+        {
+            MessageBox.Show($@"IsElevated: {IsElevated()}");
+        }
+
+        private static bool IsElevated()
+        {
+            using (var identity = WindowsIdentity.GetCurrent())
+            {
+                var principal = new WindowsPrincipal(identity);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+        }
