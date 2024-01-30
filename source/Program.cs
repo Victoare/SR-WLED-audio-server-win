@@ -213,12 +213,19 @@ internal class Program
         packet.FFT_MajorPeak = 0;
     }
 
-    private static void SenderThread()
+    private static async void SenderThread()
     {
         var endpoint = new IPEndPoint(IPAddress.Parse("239.0.0.1"), AppConfig.WLedMulticastGroupPort);
         Console.WriteLine($"UDP endpoint: {endpoint}");
         Console.WriteLine($"Binding to address: {AppConfig.LocalIPToBind}");
 
+        var retryCount = 0;
+        var targetPPS = 40; // Pack("frame") per second (max 50!)
+
+        while (keepRunning)
+        {
+            try
+            {
                 using (var client = new UdpClient(AddressFamily.InterNetwork))
                 {
                     client.Client.Bind(new IPEndPoint(AppConfig.LocalIPToBind, 0));
@@ -227,25 +234,58 @@ internal class Program
                     Console.WriteLine();
                     showDisplay.Set();
 
-            var curTop = Console.CursorTop;
-            var fft = new byte[16];
                     var sw = new Stopwatch();
-            while (keepRunning)
+
+                    /*
+                    var tmr = new Timer(new TimerCallback(_ =>
+                    {
+                        packetTimingMs = (int)sw.ElapsedMilliseconds;
+                        sw.Restart();
+                        client.Send(packet.AsByteArray(), endpoint);
+                        packetSendMs = (int)sw.ElapsedMilliseconds;
+                    }), null, 0, 1000 / targetPPS);
+
+                    while (keepRunning)
+                        Thread.Sleep(100);
+
+                    tmr.Dispose();
+
+                    */
+
+                    while (keepRunning)
                     {
                         sw.Restart();
-
                         client.Send(packet.AsByteArray(), endpoint);
-
                         packetSendMs = (int)sw.ElapsedMilliseconds;
 
-                if (sw.ElapsedMilliseconds < 50)
-                    Thread.Sleep(50 - (int)sw.ElapsedMilliseconds);
+                        // while (keepRunning && sw.ElapsedMilliseconds < 1000 / targetPPS) {  } // precise, high CPU
+                        // while (keepRunning && sw.ElapsedMilliseconds < 1000 / targetPPS) { Thread.Sleep(1); } // semi precise, medium CPU
+                        // if (packetSendMs < (1000 / targetPPS)) Thread.Sleep((1000 / targetPPS) - packetSendMs); // least precise, low CPU
+                        Thread.Sleep(1000 / targetPPS);
 
                         packetTimingMs = (int)sw.ElapsedMilliseconds;
                     }
 
                     client.Close();
                 }
+            }
+            catch (Exception ex)
+            {
+                // resume after after hibernation causes exceptions => ex.SocketErrorCode==SocketError.NoBufferSpaceAvailable
+                // TODO: Maybe differentiate between exceptions?
+                // log, restart
+                retryCount++;
+                if (retryCount == 10)
+                {
+                    Console.WriteLine("Exception: " + ex.Message);
+                    keepRunning = false;
+                }
+                else
+                {
+                    Thread.Sleep(1000);
+                }
+            }
+        }
 
         Console.WriteLine();
         Console.WriteLine("Sender thread stopped.");
