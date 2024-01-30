@@ -1,4 +1,5 @@
 ﻿using FftSharp;
+using Microsoft.Win32;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Net;
@@ -24,17 +25,23 @@ internal class Program
         if (!StartCapture())
             return;
 
+        var noDisplay = args.Any(a => a.Equals("-noinfo", StringComparison.InvariantCultureIgnoreCase));
+
         var sender = new Thread(new ThreadStart(SenderThread));
-        var display = new Thread(new ThreadStart(DisplayThread));
         sender.Start();
-        display.Start();
+        if (!noDisplay)
+        {
+            var display = new Thread(new ThreadStart(DisplayThread));
+            display.Start();
+        }
 
         Console.WriteLine("Press a key to exit");
         Console.ReadKey();
         keepRunning = false;
 
         sender.Join();
-        display.Join();
+        // if (!noDisplay)
+        //     display.Join();
 
         Console.WriteLine("End.");
     }
@@ -156,12 +163,12 @@ internal class Program
             for (var bucket = 0; bucket < buckets.Length; bucket++)
             {
                 var freqRange = fftFreq.Select((freq, idx) => new { freq, idx }).Where(itm => itm.freq >= logFreqs[bucket] && itm.freq <= logFreqs[bucket + 1]).ToArray();
-                var min = freqRange.First();
-                var max = freqRange.Last();
-                var bucketItems = fftPower.Skip(min.idx).Take(max.idx - min.idx + 1).ToArray();
-                buckets[bucket] = bucketItems.Max();
-                bucketFreq[bucket] = $"{min.freq:f2}hz - {max.freq:f2}hz - {bucketItems.Length} count";
-            }
+                    var min = freqRange.First();
+                    var max = freqRange.Last();
+                    var bucketItems = fftPower.Skip(min.idx).Take(max.idx - min.idx + 1).ToArray();
+                    buckets[bucket] = bucketItems.Max();
+                    bucketFreq[bucket] = $"{min.freq:f2}hz - {max.freq:f2}hz - {bucketItems.Length} count";
+                }
 
             // ===[ Set packet properties ]================================================================================================
 
@@ -212,33 +219,33 @@ internal class Program
         Console.WriteLine($"UDP endpoint: {endpoint}");
         Console.WriteLine($"Binding to address: {AppConfig.LocalIPToBind}");
 
-        using (var client = new UdpClient(AddressFamily.InterNetwork))
-        {
-            client.Client.Bind(new IPEndPoint(AppConfig.LocalIPToBind, 0));
+                using (var client = new UdpClient(AddressFamily.InterNetwork))
+                {
+                    client.Client.Bind(new IPEndPoint(AppConfig.LocalIPToBind, 0));
 
-            Console.WriteLine("UDP connected, sending data");
-            Console.WriteLine();
-            showDisplay.Set();
+                    Console.WriteLine("UDP connected, sending data");
+                    Console.WriteLine();
+                    showDisplay.Set();
 
             var curTop = Console.CursorTop;
             var fft = new byte[16];
-            var sw = new Stopwatch();
+                    var sw = new Stopwatch();
             while (keepRunning)
-            {
-                sw.Restart();
+                    {
+                        sw.Restart();
 
-                client.Send(packet.AsByteArray(), endpoint);
+                        client.Send(packet.AsByteArray(), endpoint);
 
-                packetSendMs = (int)sw.ElapsedMilliseconds;
+                        packetSendMs = (int)sw.ElapsedMilliseconds;
 
                 if (sw.ElapsedMilliseconds < 50)
                     Thread.Sleep(50 - (int)sw.ElapsedMilliseconds);
 
-                packetTimingMs = (int)sw.ElapsedMilliseconds;
-            }
+                        packetTimingMs = (int)sw.ElapsedMilliseconds;
+                    }
 
-            client.Close();
-        }
+                    client.Close();
+                }
 
         Console.WriteLine();
         Console.WriteLine("Sender thread stopped.");
