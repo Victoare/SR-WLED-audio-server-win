@@ -60,6 +60,7 @@ internal class Program
             return false;
         }
 
+
         Func<byte[], int, double> converter;
         switch (capture.WaveFormat.BitsPerSample)
         {
@@ -93,7 +94,7 @@ internal class Program
         var minFreq = 20;
         var maxFreq = capture.WaveFormat.SampleRate / 2; // fftFreq[fftFreq.Length - 1];
         var freqDiv = maxFreq / minFreq;
-        var logFreqs = Enumerable.Range(0, outputBands + 1).Select(i => minFreq * Math.Pow(freqDiv, (double)i / outputBands)).ToArray();
+        var freqBands = Enumerable.Range(0, outputBands + 1).Select(i => minFreq * Math.Pow(freqDiv, (double)i / outputBands)).ToArray();
 
         var sw = new Stopwatch();
 
@@ -162,13 +163,21 @@ internal class Program
 
             for (var bucket = 0; bucket < buckets.Length; bucket++)
             {
-                var freqRange = fftFreq.Select((freq, idx) => new { freq, idx }).Where(itm => itm.freq >= logFreqs[bucket] && itm.freq <= logFreqs[bucket + 1]).ToArray();
+                var freqRange = fftFreq.Select((freq, idx) => new { freq, idx }).Where(itm => itm.freq >= freqBands[bucket] && itm.freq <= freqBands[bucket + 1]).ToArray();
+                if (freqRange.Any())
+                {
                     var min = freqRange.First();
                     var max = freqRange.Last();
                     var bucketItems = fftPower.Skip(min.idx).Take(max.idx - min.idx + 1).ToArray();
                     buckets[bucket] = bucketItems.Max();
                     bucketFreq[bucket] = $"{min.freq:f2}hz - {max.freq:f2}hz - {bucketItems.Length} count";
                 }
+                else
+                {
+                    buckets[bucket] = 0;
+                    bucketFreq[bucket] = $"{freqBands[bucket]:f2}hz - {freqBands[bucket + 1]:f2}hz - {0} count";
+                }
+            }
 
             // ===[ Set packet properties ]================================================================================================
 
