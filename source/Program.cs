@@ -188,10 +188,12 @@ internal class Program
             for (var bucket = 0; bucket < buckets.Length; bucket++)
                 packet.fftResult[bucket] = (byte)((buckets[bucket] - bucketMin) * 255 / bucketSpan);
 
-            packet.sampleRaw = (float)peakPower;
-            packet.sampleSmth = (float)peakPower;
-            packet.samplePeak = 1;
-            packet.FFT_Magnitude = (float)peakPower;
+            var raw = (float)(peakPower / agcMaxValue * 255);
+
+            packet.sampleRaw = raw; // 0...1023 ?
+            packet.sampleSmth = raw;
+            packet.samplePeak = (byte)raw;
+            packet.FFT_Magnitude = raw;
             packet.FFT_MajorPeak = (float)peakFreq;
 
             // ===[ Rinse and repeat ]================================================================================================
