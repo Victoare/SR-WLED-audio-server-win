@@ -8,11 +8,13 @@ Feed windows audio output (in a processed form) to sound reactive wled instances
 
 ## The app itself
 
-![Main form](\assets\Screenshots\SysTray.png)
+![Main form](assets/Screenshots/SysTray.png)
+
 Probably, for most of the time you will see this little guy next to the clock telling you the server is running. From here you can open the main form or stop and exit the server.
 By default the main form will open when the app starts.
 
-![Main form](\assets\Screenshots\Screenshot_3.png)
+![Main form](assets/Screenshots/Screenshot_3.png)
+
 This is the main form where you can check if the capture is working (bars-a-jumpin' for the music you listen and the capture box is green) and set some values.
 
 If you one of the lucky few, who waited for this exact moment with well prepared WLED instances, non problematic network setup and music bangin' from your PC, then it will probably work out of the box. 
