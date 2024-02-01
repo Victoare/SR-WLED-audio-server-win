@@ -1,0 +1,4 @@
+[submodule "assets/Akemi"]
+	path = assets/Akemi
+	url = https://github.com/Aircoookie/Akemi.git
+	branch = master

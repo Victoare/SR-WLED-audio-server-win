@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Net.Sockets;
+using System.Runtime.InteropServices;
 
 namespace WledSRServer
 {
@@ -65,6 +66,15 @@ namespace WledSRServer
 
     internal static class AudioSyncPacketExtensions
     {
+        public static void SetToZero(this AudioSyncPacket_v2 data)
+        {
+            data.sampleRaw = 0;
+            data.sampleSmth = 0;
+            data.samplePeak = 0;
+            data.fftResult = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            data.FFT_Magnitude = 0;
+            data.FFT_MajorPeak = 0;
+        }
 
         public static byte[] AsByteArray(this AudioSyncPacket_v2 data)
         {
