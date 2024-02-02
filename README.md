@@ -2,7 +2,7 @@
 
 ## Synopsis
 
-Feed windows audio output (in a processed form) to sound reactive wled instances without huge and complicated apps. Not targeting vast configuration options, just the bare minimum to achieve this:
+Feed windows audio output (in a processed form) to sound reactive wled instances without huge and complicated apps.  Not targeting vast configuration options, just the bare minimum to achieve something like this:
 
 [![Watch the video](https://img.youtube.com/vi/uMCMXIF_DOo/hqdefault.jpg)](https://www.youtube.com/embed/uMCMXIF_DOo)
 
@@ -20,27 +20,27 @@ This is the main form where you can check if the capture is working (bars-a-jump
 If you one of the lucky few, who waited for this exact moment with well prepared WLED instances, non problematic network setup and music bangin' from your PC, then it will probably work out of the box. 
 But otherwise, fear not, because the **Settings** button will open up the bottom part (it is hidden by default).
 
-For most convenient usage you can set to **Start with windows** and the app will start after login. Mind you, to set this, the app may require elevated permissions (it will ask if needed)
-You can check **Start without GUI** and the app will only appear in the system tray.
+For most convenient usage you can set to **Start with windows** and the app will start after login. Mind you, to set this, the app may require elevated permissions (it will ask if needed).
+Also you can check **Start without GUI** and the app will only appear in the system tray at start.
 
-**FFT range** will set the frequency range for the processing. By default is 20-20000hz but you can widen or tighten the range.
+**FFT range** will set the frequency range for the bars. By default it is 20-20000hz but you can widen or tighten the range. But be aware, that if the range is too tight, let's say 10-50hz to show only the super low frequencies, there is a possibility to have empty bars. This is not a bug nor a feature, jut a side effect.
 
 **SR Port** is the same port you have to set up in your WLED configuration page. By default this is 11988.
 
-In WLED you have to enable the AudioReactive module, the sync interface and set the Mode to Receive. Open the Info window and check if it is turned on (the power icon should be green). If everything is working, then you will see there: "*Audio Source : UDP sound sync - receiving*" and "*UDP Sound Sync : receive mode v2*"
+In WLED, you have to enable the AudioReactive module, the sync interface and set the Mode to Receive. Open the Info window and check if it is turned on (the power icon should be green). If everything is working, then you should see: "*Audio Source : UDP sound sync - receiving*" and "*UDP Sound Sync : receive mode v2*" there.
 If you only see "*Audio Source : UDP sound sync - idle*" it means, the wled is waiting for the audio data.
 
-If the bars are jumping the *Packet per second* shows a nonzero value, WLED is properly configured but still not dancing then try to set the **Local IP** to the IP you machine have in the network. If you start to type, it will autosuggest IPs it found on the network adapters.
+If the bars are jumping, the *Packet per second* shows a nonzero value, WLED is properly configured but still not reacting to your audio then try to set the **Local IP** to the IP you machine have in the network. If you start to type, it will autosuggest IPs it found on the network adapters.
 
-If the app started with the main form open then when you close the form with the "X" you will receive a notification telling you that the app will run in the background.
+If the app was started with the main form open then when you close the form with the "X" you will receive a notification telling you that the app will be runing in the background.
 
-**Stop server and exit** is a mysterious button. :D
+**Stop server and exit** is a mysterious button. It will end everything! :D
 
 That's all folks, I hope it will run smoothly :)
 
 ## "Install"
 
-Download the latest version from [releases](/releases) and put it somewhere on your machine. If you set it to auto run and move the exe somewhere else, you have to re-enable it.
+Download the latest version from [releases](https://github.com/Victoare/SR-WLED-audio-server-win/releases/latest) and put it somewhere on your machine. If you set it to auto run and move the exe somewhere else, you have to set it again.
 The app is a portable one, without any fancy installer, but it needs .NET 8.0 runtime. If you don't have it already installed then at the start you will be prompted to do so (giving you the link to the .NET installer)
 
 ## Libraries / assets
