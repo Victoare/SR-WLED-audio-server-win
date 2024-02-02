@@ -1,5 +1,7 @@
-﻿using System.Reflection;
+﻿using System.Configuration;
+using System.Reflection;
 using WledSRServer;
+using WledSRServer.Properties;
 
 internal class Program
 {
@@ -53,6 +55,9 @@ internal class Program
         writer.WriteLine($"Message: {ex.Message}");
         writer.WriteLine($"Stack Trace");
         writer.WriteLine($"{ex.StackTrace}");
+        writer.WriteLine($"Config values");
+        foreach (var prop in Settings.Default.Properties.OfType<SettingsProperty>().OrderBy(p => p.Name))
+            writer.WriteLine(@$"  {prop.Name} = ""{Settings.Default[prop.Name]}""");
         writer.WriteLine();
         writer.Close();
         MessageBox.Show("HOT DIGGITY DAMN!\n\nSomething unexpected happened.\n\nCan you help me out and send the exceptionlog.txt from the app directory?\n\nThanks.", MboxTitle);

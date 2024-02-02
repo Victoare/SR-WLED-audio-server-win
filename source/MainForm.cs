@@ -1,9 +1,12 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 
 namespace WledSRServer
 {
     public partial class MainForm : Form
     {
+        private Stopwatch PPSwatch = new Stopwatch();
+
         public MainForm()
         {
             InitializeComponent();
@@ -51,18 +54,41 @@ namespace WledSRServer
             tmr.Tick += UpdateStats;
             tmr.Interval = 50;
             tmr.Start();
+
+            toolTip1.InitialDelay = 100;
+
+            PPSwatch.Start();
         }
 
         private void UpdateStats(object? sender, EventArgs e)
         {
-            //    Console.WriteLine($"audioProcess: {audioProcessMs}ms    ");
-            //    Console.WriteLine($"packetSend:   {packetSendMs}ms      ");
-            //    Console.WriteLine($"packetTiming: {packetTimingMs}ms => {(packetTimingMs == 0 ? "" : 1000 / packetTimingMs):D} pps(fps)    ");
-
-            var pps = Program.ServerContext.PacketTimingMs > 0 ? 1000 / Program.ServerContext.PacketTimingMs : 0;
-            lblPPS.Text = $"Packet per second : {pps:D}";
+            if (PPSwatch.ElapsedMilliseconds > 500)
+            {
+                var pps = 0;
+                if (Program.ServerContext.PacketCounter > 0)
+                {
+                    pps = (int)(Program.ServerContext.PacketCounter * 1000 / PPSwatch.ElapsedMilliseconds);
+                    Program.ServerContext.PacketCounter = 0;
+                    PPSwatch.Restart();
+                }
+                lblPPS.Text = $"Packet per second : {pps:D}";
+            }
+            if (Program.ServerContext.PacketSendError)
+            {
+                lblPPS.ForeColor = Color.Red;
+                toolTip1.SetToolTip(lblPPS, "There is some problem sending out the packages.");
+            }
+            else
+            {
+                lblPPS.ForeColor = Program.ServerContext.PacketSendError ? Color.Red : Color.FromKnownColor(KnownColor.ControlText);
+                toolTip1.SetToolTip(lblPPS, null);
+            }
 
             lblCapturing.BackColor = AudioCapture.Capturing ? Color.LightGreen : Color.FromKnownColor(KnownColor.Control);
+        }
+        private void btnSettings_Click(object sender, EventArgs e)
+        {
+            grpSettings.Visible = !grpSettings.Visible;
         }
 
         private void btnExitApplication_Click(object sender, EventArgs e)
@@ -88,13 +114,13 @@ namespace WledSRServer
 
         private void txtUdpPort_TextChanged(object sender, EventArgs e)
         {
-            if (!int.TryParse(txtUdpPort.Text, out var udpport))
+            if (!int.TryParse(txtUdpPort.Text, out var udpport) || udpport < 0 || udpport > 65535)
             {
                 txtUdpPort.BackColor = Color.Salmon;
-                toolTip1.SetToolTip(txtUdpPort, "Not a valid number");
+                toolTip1.SetToolTip(txtUdpPort, "Not a valid port number");
                 return;
             }
-            toolTip1.SetToolTip(txtUdpPort, "");
+            toolTip1.SetToolTip(txtUdpPort, null);
             txtUdpPort.BackColor = Color.White;
 
             Properties.Settings.Default.WledUdpMulticastPort = udpport;
@@ -105,13 +131,13 @@ namespace WledSRServer
         private void txtLocalIpAddress_Changed(object? sender, EventArgs e)
         {
             var newIpAddress = txtLocalIpAddress.Text;
-            if (!string.IsNullOrEmpty(newIpAddress) && !IPAddress.TryParse(newIpAddress, out var _))
+            if (!string.IsNullOrEmpty(newIpAddress) && (!IPAddress.TryParse(newIpAddress, out var newAddress) || !Network.TestLocalIP(newAddress)))
             {
                 txtLocalIpAddress.BackColor = Color.Salmon;
-                toolTip1.SetToolTip(txtLocalIpAddress, "Not a valid IP address");
+                toolTip1.SetToolTip(txtLocalIpAddress, "Not valid IP address or there is a problem using it.");
                 return;
             }
-            toolTip1.SetToolTip(txtLocalIpAddress, "");
+            toolTip1.SetToolTip(txtLocalIpAddress, null);
             txtLocalIpAddress.BackColor = Color.White;
 
             Properties.Settings.Default.LocalIPToBind = newIpAddress;
@@ -128,11 +154,6 @@ namespace WledSRServer
                 Properties.Settings.Default.Save();
         }
 
-        private void btnSettings_Click(object sender, EventArgs e)
-        {
-            grpSettings.Visible = !grpSettings.Visible;
-        }
-
         private void txtFFTLower_TextChanged(object sender, EventArgs e)
         {
             if (!int.TryParse(txtFFTLower.Text, out var newValue) || newValue < 1 || newValue >= Properties.Settings.Default.FFTHigh)
@@ -141,7 +162,7 @@ namespace WledSRServer
                 toolTip1.SetToolTip(txtFFTLower, "Needs to be a number between 1 and the higher end of the range");
                 return;
             }
-            toolTip1.SetToolTip(txtFFTLower, "");
+            toolTip1.SetToolTip(txtFFTLower, null);
             txtFFTLower.BackColor = Color.White;
 
             Properties.Settings.Default.FFTLow = newValue;
@@ -157,7 +178,7 @@ namespace WledSRServer
                 toolTip1.SetToolTip(txtFFTUpper, "Needs to be a number between the lower end of the range and 99999");
                 return;
             }
-            toolTip1.SetToolTip(txtFFTUpper, "");
+            toolTip1.SetToolTip(txtFFTUpper, null);
             txtFFTUpper.BackColor = Color.White;
 
             Properties.Settings.Default.FFTHigh = newValue;

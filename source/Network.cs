@@ -8,20 +8,20 @@ namespace WledSRServer
     internal static class Network
     {
         private static Thread? _sender;
-        private volatile static bool _keepRunning = true;
+        private volatile static bool _keepThreadRunning = true;
 
         public static void Start()
         {
             Stop();
 
-            _keepRunning = true;
+            _keepThreadRunning = true;
             _sender = new Thread(new ThreadStart(SenderThread));
             _sender.Start();
         }
 
         public static void Stop()
         {
-            _keepRunning = false;
+            _keepThreadRunning = false;
             if (_sender == null)
                 return;
             _sender.Join();
@@ -40,75 +40,98 @@ namespace WledSRServer
                     .Select(ua => ua.Address.ToString())
                     .ToArray();
 
-        private static async void SenderThread()
+        private static IPEndPoint endpoint => new IPEndPoint(IPAddress.Parse("239.0.0.1"), Properties.Settings.Default.WledUdpMulticastPort);
+        private static IPAddress localIPToBind
         {
-            var endpoint = new IPEndPoint(IPAddress.Parse("239.0.0.1"), Properties.Settings.Default.WledUdpMulticastPort);
-            // Console.WriteLine($"UDP endpoint: {endpoint}");
-            // Console.WriteLine($"Binding to address: {AppConfig.LocalIPToBind}");
-
-            var retryCount = 0;
-            var targetPPS = 40; // Pack("frame") per second (max 50!)
-
-            while (_keepRunning)
+            get
             {
+                if (!IPAddress.TryParse(Properties.Settings.Default.LocalIPToBind, out var address))
+                    if (!IPAddress.TryParse(GetLocalIPAddresses().FirstOrDefault(), out address))
+                        address = IPAddress.Any;
+                return address;
+            }
+        }
+
+        public static bool TestLocalIP(IPAddress localIp)
+        {
+            try
+            {
+                using (var client = new UdpClient(AddressFamily.InterNetwork))
+                {
+                    client.Client.Bind(new IPEndPoint(localIp, 0));
+                    var testPacket = new byte[5]; // intentionally wrong packet!
+                    client.Send(testPacket, endpoint);
+                    client.Close();
+                }
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
+
+        private static void SenderThread()
+        {
+            var retryCount = 0;
+            var targetPPS = 45; // Pack("frame") per second (max 50!)
+
+            while (_keepThreadRunning)
+            {
+                Exception? exception = null;
+
                 try
                 {
-                    if (!IPAddress.TryParse(Properties.Settings.Default.LocalIPToBind, out var localIpToBind))
-                        if (!IPAddress.TryParse(GetLocalIPAddresses().FirstOrDefault(), out localIpToBind))
-                            localIpToBind = IPAddress.Any;
-
                     using (var client = new UdpClient(AddressFamily.InterNetwork))
                     {
-                        client.Client.Bind(new IPEndPoint(localIpToBind, 0));
-
-                        Console.WriteLine("UDP connected, sending data");
-                        Console.WriteLine();
+                        client.Client.Bind(new IPEndPoint(localIPToBind, 0));
 
                         var sw = new Stopwatch();
+                        var stopSending = new ManualResetEventSlim();
 
-                        /*
-                        var tmr = new Timer(new TimerCallback(_ =>
+                        var tmr = new System.Threading.Timer(new TimerCallback(_ =>
                         {
-                            packetTimingMs = (int)sw.ElapsedMilliseconds;
                             sw.Restart();
-                            client.Send(packet.AsByteArray(), endpoint);
-                            packetSendMs = (int)sw.ElapsedMilliseconds;
+
+                            try
+                            {
+                                client.Send(Program.ServerContext.Packet.AsByteArray(), endpoint);
+                            }
+                            catch (Exception ex)
+                            {
+                                exception = ex;
+                                stopSending.Set();
+                            }
+
+                            if (!_keepThreadRunning)
+                                stopSending.Set();
+
+                            Program.ServerContext.PacketSendError = false;
+                            Program.ServerContext.PacketCounter++;
                         }), null, 0, 1000 / targetPPS);
 
-                        while (keepRunning)
-                            Thread.Sleep(100);
+                        stopSending.Wait();
 
                         tmr.Dispose();
-
-                        */
-
-                        while (_keepRunning)
-                        {
-                            sw.Restart();
-                            client.Send(Program.ServerContext.Packet.AsByteArray(), endpoint);
-                            Program.ServerContext.PacketSendMs = (int)sw.ElapsedMilliseconds;
-
-                            // while (keepRunning && sw.ElapsedMilliseconds < 1000 / targetPPS) {  } // precise, high CPU
-                            // while (keepRunning && sw.ElapsedMilliseconds < 1000 / targetPPS) { Thread.Sleep(1); } // semi precise, medium CPU
-                            // if (packetSendMs < (1000 / targetPPS)) Thread.Sleep((1000 / targetPPS) - packetSendMs); // least precise, low CPU
-                            Thread.Sleep(1000 / targetPPS);
-
-                            Program.ServerContext.PacketTimingMs = (int)sw.ElapsedMilliseconds;
-                        }
-
                         client.Close();
                     }
                 }
                 catch (Exception ex)
                 {
+                    exception = ex;
+                }
+
+                if (exception != null)
+                {
                     // resume after after hibernation causes exceptions => ex.SocketErrorCode==SocketError.NoBufferSpaceAvailable
                     // TODO: Maybe differentiate between exceptions?
                     // log, restart
+                    Program.ServerContext.PacketSendError = true;
                     retryCount++;
-                    if (retryCount == 10)
+                    if (retryCount == 30)
                     {
-                        Program.LogException(ex);
-                        _keepRunning = false;
+                        Program.LogException(exception);
+                        _keepThreadRunning = false;
                     }
                     else
                     {
@@ -116,9 +139,6 @@ namespace WledSRServer
                     }
                 }
             }
-
-            // Console.WriteLine();
-            // Console.WriteLine("Sender thread stopped.");
         }
 
     }

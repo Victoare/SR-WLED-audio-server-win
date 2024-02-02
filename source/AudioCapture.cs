@@ -3,7 +3,6 @@ using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 
 namespace WledSRServer
 {
@@ -80,8 +79,9 @@ namespace WledSRServer
             }
 
             var fftWindow = new FftSharp.Windows.Hanning();
-
-            var outputBands = Program.ServerContext.Packet.fftResult.Length;
+            
+            var packet = Program.ServerContext.Packet;
+            var outputBands = packet.fftResult.Length;
 
             // logarithmic freq scale
             // var minFreq = 20;
@@ -97,15 +97,14 @@ namespace WledSRServer
             double agcMaxValue = 0;
             var buckets = new double[outputBands];
             var bucketFreq = new string[outputBands];
-
-            var packet = Program.ServerContext.Packet;
+          
 
             _capture.DataAvailable += (s, e) =>
             {
                 sw.Restart();
                 if (e.BytesRecorded == 0)
                 {
-                    Program.ServerContext.Packet.SetToZero();
+                    packet.SetToZero();
                     return;
                 }
 
