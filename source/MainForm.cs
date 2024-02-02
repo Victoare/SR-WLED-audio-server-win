@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net;
+using System.Reflection;
 
 namespace WledSRServer
 {
@@ -24,6 +25,8 @@ namespace WledSRServer
 
             // V=FreqToDisplay, V0=FreqLow, V1=FreqHigh, X0-X1 control width
             // X = X0 + (X1 - X0)(log(V) - log(V0))/(log(V1) - log(V0))
+
+            Text = $"WLED SoundReactive Server - {Program.Version(false)}";
 
             btnSetAutoRun.CheckboxChecked = AdminFunctions.GetAutoRun();
             btnSetStartupGUI.CheckboxChecked = Properties.Settings.Default.StartWithoutGUI;

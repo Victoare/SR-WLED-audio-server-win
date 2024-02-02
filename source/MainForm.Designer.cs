@@ -299,13 +299,13 @@ namespace WledSRServer
             // 
             grpSettings.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             grpSettings.Controls.Add(tableLayoutPanel1);
-            grpSettings.Controls.Add(label7);
             grpSettings.Controls.Add(btnSetStartupGUI);
             grpSettings.Controls.Add(txtLocalIpAddress);
             grpSettings.Controls.Add(btnSetAutoRun);
             grpSettings.Controls.Add(label2);
             grpSettings.Controls.Add(label1);
             grpSettings.Controls.Add(txtUdpPort);
+            grpSettings.Controls.Add(label7);
             grpSettings.Location = new Point(4, 239);
             grpSettings.Name = "grpSettings";
             grpSettings.Size = new Size(643, 79);
@@ -315,10 +315,11 @@ namespace WledSRServer
             // 
             // label7
             // 
+            label7.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             label7.AutoSize = true;
             label7.Font = new Font("Segoe UI", 8.25F, FontStyle.Regular, GraphicsUnit.Point, 238);
             label7.ForeColor = SystemColors.ControlDark;
-            label7.Location = new Point(590, 62);
+            label7.Location = new Point(593, 64);
             label7.Name = "label7";
             label7.Size = new Size(49, 13);
             label7.TabIndex = 17;

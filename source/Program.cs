@@ -12,6 +12,9 @@ internal class Program
 
     public const string MboxTitle = "WLED SR Server";
 
+    public static string Version(bool withCommitHash)
+        => Application.ProductVersion.Substring(0, Application.ProductVersion.IndexOf('+') + (withCommitHash ? 8 : 0));
+
     [STAThread]
     private static void Main(string[] args)
     {
@@ -52,6 +55,7 @@ internal class Program
         var logFile = Path.Combine(Environment.CurrentDirectory, "exceptionlog.txt");
         var writer = new StreamWriter(logFile, true);
         writer.WriteLine($"===[ {DateTime.Now} ]==============================================================================");
+        writer.WriteLine($"App version: {Version(true)}");
         writer.WriteLine($"Message: {ex.Message}");
         writer.WriteLine($"Stack Trace");
         writer.WriteLine($"{ex.StackTrace}");
