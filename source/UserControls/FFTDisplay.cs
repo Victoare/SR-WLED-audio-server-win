@@ -1,4 +1,7 @@
-﻿namespace WledSRServer
+﻿using NAudio.MediaFoundation;
+using System.Windows.Forms;
+
+namespace WledSRServer
 {
     public partial class FFTDisplay : UserControl
     {
@@ -11,6 +14,53 @@
             //timer1.Enabled = !DesignMode;
             //if (!DesignMode)
             timer1.Start();
+
+            RecalculateRectangles();
+            this.Resize += (s, e) => RecalculateRectangles();
+
+            this.MouseMove += FFTDisplay_MouseMove;
+        }
+
+        private void FFTDisplay_MouseMove(object? sender, MouseEventArgs e)
+        {
+            var mouseX = e.Location.X;
+            var undexRextIdx = _rectanglesFull.Select((r, idx) => new { x0 = r.X, x1 = r.X + r.Width, idx }).FirstOrDefault(r => r.x0 <= mouseX && r.x1 >= mouseX)?.idx;
+            toolTip1.SetToolTip(this, (undexRextIdx == null || AudioCapture.FFTfreqBands == null) ? null : AudioCapture.FFTfreqBands[undexRextIdx.Value]);
+        }
+
+        private void ToolTip1_Draw(object? sender, DrawToolTipEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private const int PADDING = 4;
+        private RectangleF[] _rectanglesFull;
+        private RectangleF[] _rectanglesBar;
+        private Brush[] _barColor;
+        private Brush _barBG;
+        private Pen _barBorder;
+
+        private void RecalculateRectangles()
+        {
+            var fftBytes = Program.ServerContext.Packet.fftResult;
+            _rectanglesFull = new RectangleF[fftBytes.Length];
+            _rectanglesBar = new RectangleF[fftBytes.Length];
+            var width = (float)(this.Width - 1 + PADDING) / fftBytes.Length - PADDING;
+            var fullHeight = (float)this.Height - 1;
+
+            for (int i = 0; i < fftBytes.Length; i++)
+            {
+                _rectanglesFull[i] = new RectangleF(i * (width + PADDING), 0, width, fullHeight);
+                var barHeight = fullHeight * fftBytes[i] / 255;
+                _rectanglesBar[i] = new RectangleF(i * (width + PADDING), fullHeight - barHeight, width, barHeight);
+            }
+
+            _barColor = new Brush[fftBytes.Length];
+            for (int i = 0; i < fftBytes.Length; i++)
+                _barColor[i] = new SolidBrush(hsv2rgb(i / 15f * 0.85f, 1f, 1f));
+
+            _barBG = new SolidBrush(Color.FromKnownColor(KnownColor.Control));
+            _barBorder = new Pen(Color.Silver);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -20,31 +70,20 @@
             if (DesignMode)
                 new Random().NextBytes(fftBytes);
 
-            var rectanglesFull = new RectangleF[fftBytes.Length];
-            var rectanglesBar = new RectangleF[fftBytes.Length];
-            var padding = 4;
-            var width = (float)(this.Width - 1 + padding) / fftBytes.Length - padding;
             var fullHeight = (float)this.Height - 1;
-
             for (int i = 0; i < fftBytes.Length; i++)
             {
-                rectanglesFull[i] = new RectangleF(i * (width + padding), 0, width, fullHeight);
                 var barHeight = fullHeight * fftBytes[i] / 255;
-                rectanglesBar[i] = new RectangleF(i * (width + padding), fullHeight - barHeight, width, barHeight);
+                _rectanglesBar[i].Y = fullHeight - barHeight;
+                _rectanglesBar[i].Height = barHeight;
             }
 
-            var bgBrush = new SolidBrush(Color.FromKnownColor(KnownColor.Control));
-            var borderPen = new Pen(Color.Silver);
-            e.Graphics.FillRectangles(bgBrush, rectanglesFull);     // bg
-            //e.Graphics.FillRectangles(Brushes.Blue, rectanglesBar); // bar
+            e.Graphics.FillRectangles(_barBG, _rectanglesFull);     // bg
 
             for (int i = 0; i < fftBytes.Length; i++)
-            {
-                var barColor = new SolidBrush(hsv2rgb(i / 15f * 0.85f, 1f, 1f));
-                e.Graphics.FillRectangle(barColor, rectanglesBar[i]); // bar
-            }
+                e.Graphics.FillRectangle(_barColor[i], _rectanglesBar[i]); // bar
 
-            e.Graphics.DrawRectangles(borderPen, rectanglesFull);   // border
+            e.Graphics.DrawRectangles(_barBorder, _rectanglesFull);   // border
         }
 
         private Color hsv2rgb(float h, float s, float v)

@@ -8,6 +8,8 @@ namespace WledSRServer
 {
     internal static class AudioCapture
     {
+        #region GetDevices
+
         public record SimpleDeviceDescriptor(string ID, string Name);
 
         public static SimpleDeviceDescriptor[] GetDevices()
@@ -19,9 +21,12 @@ namespace WledSRServer
                             .ToArray();
         }
 
+        #endregion
+
         private static WasapiCapture? _capture;
 
         public static bool Capturing => _capture?.CaptureState == CaptureState.Capturing;
+        public static string[]? FFTfreqBands;
 
         public static bool Start()
         {
@@ -79,7 +84,7 @@ namespace WledSRServer
             }
 
             var fftWindow = new FftSharp.Windows.Hanning();
-            
+
             var packet = Program.ServerContext.Packet;
             var outputBands = packet.fftResult.Length;
 
@@ -88,7 +93,6 @@ namespace WledSRServer
             // var maxFreq = _capture.WaveFormat.SampleRate / 2; // fftFreq[fftFreq.Length - 1];
             var minFreq = Properties.Settings.Default.FFTLow;
             var maxFreq = Properties.Settings.Default.FFTHigh;
-
             var freqDiv = maxFreq / minFreq;
             var freqBands = Enumerable.Range(0, outputBands + 1).Select(i => minFreq * Math.Pow(freqDiv, (double)i / outputBands)).ToArray();
 
@@ -96,8 +100,7 @@ namespace WledSRServer
 
             double agcMaxValue = 0;
             var buckets = new double[outputBands];
-            var bucketFreq = new string[outputBands];
-          
+            FFTfreqBands = new string[outputBands];
 
             _capture.DataAvailable += (s, e) =>
             {
@@ -121,6 +124,8 @@ namespace WledSRServer
                     int position = (i + channelToCapture) * _capture.WaveFormat.BlockAlign;
                     values[i] = converter(e.Buffer, position);
                 }
+
+                // Debug.WriteLine($"AudioCapture: {values.Length}"); // 2880 per event
 
                 var valMax = values.Max();
                 if (valMax < 0.00001)
@@ -161,19 +166,23 @@ namespace WledSRServer
                 for (var bucket = 0; bucket < buckets.Length; bucket++)
                 {
                     var freqRange = fftFreq.Select((freq, idx) => new { freq, idx }).Where(itm => itm.freq >= freqBands[bucket] && itm.freq <= freqBands[bucket + 1]).ToArray();
+                    var bucketCount = 0;
                     if (freqRange.Any())
                     {
                         var min = freqRange.First();
                         var max = freqRange.Last();
                         var bucketItems = fftPower.Skip(min.idx).Take(max.idx - min.idx + 1).ToArray();
                         buckets[bucket] = bucketItems.Max();
-                        bucketFreq[bucket] = $"{min.freq:f2}hz - {max.freq:f2}hz - {bucketItems.Length} count";
+                        bucketCount = bucketItems.Length;
+                        // FFTfreqBands[bucket] = $"{min.freq:f2}hz - {max.freq:f2}hz - {bucketItems.Length} count";
                     }
                     else
                     {
                         buckets[bucket] = 0;
-                        bucketFreq[bucket] = $"{freqBands[bucket]:f2}hz - {freqBands[bucket + 1]:f2}hz - {0} count";
                     }
+                    // FFTfreqBands[bucket] = $"{freqBands[bucket]:F0}Hz - {freqBands[bucket + 1]:F0}Hz [{bucketCount} bin]";
+                    FFTfreqBands[bucket] = $"{freqBands[bucket]:F0}Hz - {freqBands[bucket + 1]:F0}Hz";
+                    if (bucketCount == 0) FFTfreqBands[bucket] += " [NO DATA]";
                 }
 
                 // ===[ Set packet properties ]================================================================================================
