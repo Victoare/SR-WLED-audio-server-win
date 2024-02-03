@@ -1,6 +1,7 @@
-﻿using System.Diagnostics;
+﻿using FftSharp;
+using System.Diagnostics;
 using System.Net;
-using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace WledSRServer
 {
@@ -53,17 +54,14 @@ namespace WledSRServer
             txtFFTUpper.Text = Properties.Settings.Default.FFTHigh.ToString();
             txtFFTUpper.TextChanged += txtFFTUpper_TextChanged;
 
-            var tmr = new System.Windows.Forms.Timer();
-            tmr.Tick += UpdateStats;
-            tmr.Interval = 50;
-            tmr.Start();
-
             toolTip1.InitialDelay = 100;
 
+            Program.ServerContext.PacketCounter = 0;
             PPSwatch.Start();
+            tmrUpdateStats.Enabled = true;
         }
 
-        private void UpdateStats(object? sender, EventArgs e)
+        private void tmrUpdateStats_Tick(object sender, EventArgs e)
         {
             if (PPSwatch.ElapsedMilliseconds > 500)
             {

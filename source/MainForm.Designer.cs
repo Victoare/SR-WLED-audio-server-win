@@ -55,6 +55,7 @@ namespace WledSRServer
             toolTip1 = new ToolTip(components);
             grpSettings = new GroupBox();
             label7 = new Label();
+            tmrUpdateStats = new System.Windows.Forms.Timer(components);
             grpBottomPanel.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             groupBox2.SuspendLayout();
@@ -326,6 +327,10 @@ namespace WledSRServer
             label7.Text = "Victoare";
             label7.TextAlign = ContentAlignment.BottomRight;
             // 
+            // tmrUpdateStats
+            // 
+            tmrUpdateStats.Tick += tmrUpdateStats_Tick;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -379,5 +384,6 @@ namespace WledSRServer
         private Button btnSettings;
         private GroupBox grpSettings;
         private Label label7;
+        private System.Windows.Forms.Timer tmrUpdateStats;
     }
 }
