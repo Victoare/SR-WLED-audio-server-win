@@ -31,7 +31,6 @@ namespace WledSRServer
 
             btnSetAutoRun.CheckboxChecked = AdminFunctions.GetAutoRun();
             btnSetStartupGUI.CheckboxChecked = Properties.Settings.Default.StartWithoutGUI;
-            txtUdpPort.Text = Properties.Settings.Default.WledUdpMulticastPort.ToString();
 
             ddlAudioDevices.DataSource = AudioCapture.GetDevices();
             ddlAudioDevices.DisplayMember = nameof(AudioCapture.SimpleDeviceDescriptor.Name);
@@ -39,9 +38,11 @@ namespace WledSRServer
             ddlAudioDevices.SelectedValue = Properties.Settings.Default.AudioCaptureDeviceId;
             ddlAudioDevices.SelectedIndexChanged += ddlAudioDevices_Changed;
 
+            txtUdpPort.Text = Properties.Settings.Default.WledUdpMulticastPort.ToString();
             txtUdpPort.AutoCompleteCustomSource.Add("11988"); // the default one
             txtUdpPort.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
             txtUdpPort.AutoCompleteSource = AutoCompleteSource.CustomSource;
+            txtUdpPort.TextChanged += txtUdpPort_TextChanged;
 
             txtLocalIpAddress.AutoCompleteCustomSource.AddRange(Network.GetLocalIPAddresses());
             txtLocalIpAddress.AutoCompleteMode = AutoCompleteMode.Suggest;

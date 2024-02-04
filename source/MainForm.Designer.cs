@@ -100,9 +100,9 @@ namespace WledSRServer
             lblPPS.AutoSize = true;
             lblPPS.Location = new Point(259, 17);
             lblPPS.Name = "lblPPS";
-            lblPPS.Size = new Size(124, 15);
+            lblPPS.Size = new Size(122, 15);
             lblPPS.TabIndex = 4;
-            lblPPS.Text = "Packet per second : 50";
+            lblPPS.Text = "Packet per second : --";
             lblPPS.TextAlign = ContentAlignment.MiddleRight;
             // 
             // tableLayoutPanel1
@@ -234,7 +234,6 @@ namespace WledSRServer
             txtUdpPort.Size = new Size(40, 23);
             txtUdpPort.TabIndex = 2;
             txtUdpPort.Text = "65535";
-            txtUdpPort.TextChanged += txtUdpPort_TextChanged;
             // 
             // label1
             // 
