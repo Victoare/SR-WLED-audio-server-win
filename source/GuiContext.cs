@@ -51,11 +51,12 @@
             if (_mainForm?.Visible == true)
             {
                 _mainForm.Activate();
+                _mainForm.WindowState = FormWindowState.Normal;
             }
             else
             {
                 _mainForm = _mainForm ?? new MainForm();
-                _mainForm.ShowDialog();
+                _mainForm.Show();
             }
         }
 
