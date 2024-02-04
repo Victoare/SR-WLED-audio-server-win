@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using WledSRServer.Properties;
 
 namespace WledSRServer
 {
@@ -87,18 +88,24 @@ namespace WledSRServer
                         Debug.WriteLine($"NETWORK Bind");
                         client.Client.Bind(new IPEndPoint(localIPToBind, 0));
 
-                        var sw = new Stopwatch();
+                        var swIpCheck = new Stopwatch();
                         var stopSending = new ManualResetEventSlim();
+
+                        if (string.IsNullOrEmpty(Settings.Default.LocalIPToBind))
+                            swIpCheck.Start();
 
                         var tmr = new System.Threading.Timer(new TimerCallback(_ =>
                         {
-                            sw.Restart();
-
-                            if ((client.Client.LocalEndPoint is not IPEndPoint clientEndpoint) || clientEndpoint.Address.ToString() != localIPToBind.ToString())
+                            if (string.IsNullOrEmpty(Settings.Default.LocalIPToBind) && (swIpCheck.Elapsed.TotalSeconds > 5))
                             {
                                 // sometimes after Hibernation the automatic IP detection (when Properties.Settings.Default.LocalIPToBind is empty) detects the wrong address
-                                stopSending.Set();
-                                return;
+                                if ((client.Client.LocalEndPoint is not IPEndPoint clientEndpoint) ||
+                                    clientEndpoint.Address.ToString() != localIPToBind.ToString())
+                                {
+                                    stopSending.Set();
+                                    return;
+                                }
+                                swIpCheck.Restart();
                             }
 
                             try
