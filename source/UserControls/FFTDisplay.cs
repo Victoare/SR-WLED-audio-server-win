@@ -1,7 +1,4 @@
-﻿using NAudio.MediaFoundation;
-using System.Windows.Forms;
-
-namespace WledSRServer
+﻿namespace WledSRServer
 {
     public partial class FFTDisplay : UserControl
     {
@@ -9,16 +6,35 @@ namespace WledSRServer
         {
             InitializeComponent();
 
-            timer1.Interval = 20;
-            timer1.Tick += (s, o) => { if (!DesignMode) { Invalidate(); } };
-            //timer1.Enabled = !DesignMode;
-            //if (!DesignMode)
-            timer1.Start();
+            SetupRedrawOnNewPacket();
 
             RecalculateRectangles();
             this.Resize += (s, e) => RecalculateRectangles();
 
             this.MouseMove += FFTDisplay_MouseMove;
+        }
+
+        private void SetupRedrawOnNewPacket()
+        {
+            var cancelUpdate = new CancellationTokenSource();
+            new Thread(new ThreadStart(() =>
+            {
+                while (!cancelUpdate.IsCancellationRequested && !DesignMode)
+                {
+                    try
+                    {
+                        Program.ServerContext.PacketUpdated.Wait(500, cancelUpdate.Token);
+                    }
+                    catch
+                    {
+                    }
+                    Invalidate();
+                }
+            })).Start();
+            Disposed += (s, e) =>
+            {
+                cancelUpdate.Cancel();
+            };
         }
 
         private void FFTDisplay_MouseMove(object? sender, MouseEventArgs e)
@@ -42,21 +58,20 @@ namespace WledSRServer
 
         private void RecalculateRectangles()
         {
-            var fftBytes = Program.ServerContext.Packet.fftResult;
-            _rectanglesFull = new RectangleF[fftBytes.Length];
-            _rectanglesBar = new RectangleF[fftBytes.Length];
-            var width = (float)(this.Width - 1 + PADDING) / fftBytes.Length - PADDING;
+            var barCount = Program.ServerContext.Packet.fftResult.Length;
+            _rectanglesFull = new RectangleF[barCount];
+            _rectanglesBar = new RectangleF[barCount];
+            var width = (float)(this.Width - 1 + PADDING) / barCount - PADDING;
             var fullHeight = (float)this.Height - 1;
 
-            for (int i = 0; i < fftBytes.Length; i++)
+            for (int i = 0; i < barCount; i++)
             {
                 _rectanglesFull[i] = new RectangleF(i * (width + PADDING), 0, width, fullHeight);
-                var barHeight = fullHeight * fftBytes[i] / 255;
-                _rectanglesBar[i] = new RectangleF(i * (width + PADDING), fullHeight - barHeight, width, barHeight);
+                _rectanglesBar[i] = new RectangleF(i * (width + PADDING), 0, width, 0);
             }
 
-            _barColor = new Brush[fftBytes.Length];
-            for (int i = 0; i < fftBytes.Length; i++)
+            _barColor = new Brush[barCount];
+            for (int i = 0; i < barCount; i++)
                 _barColor[i] = new SolidBrush(hsv2rgb(i / 15f * 0.85f, 1f, 1f));
 
             _barBG = new SolidBrush(Color.FromKnownColor(KnownColor.Control));
@@ -70,7 +85,7 @@ namespace WledSRServer
             if (DesignMode)
                 new Random().NextBytes(fftBytes);
 
-            var fullHeight = (float)this.Height - 1;
+            var fullHeight = _rectanglesFull[0].Height;
             for (int i = 0; i < fftBytes.Length; i++)
             {
                 var barHeight = fullHeight * fftBytes[i] / 255;

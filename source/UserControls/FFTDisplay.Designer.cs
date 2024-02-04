@@ -29,7 +29,6 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            timer1 = new System.Windows.Forms.Timer(components);
             toolTip1 = new ToolTip(components);
             SuspendLayout();
             // 
@@ -44,8 +43,6 @@
         }
 
         #endregion
-
-        private System.Windows.Forms.Timer timer1;
         private ToolTip toolTip1;
     }
 }
