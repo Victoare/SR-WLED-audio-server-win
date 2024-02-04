@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Threading;
 using WledSRServer.Properties;
 
 namespace WledSRServer
@@ -10,11 +11,12 @@ namespace WledSRServer
     {
         private static Thread? _sender;
         private volatile static bool _keepThreadRunning = true;
+        private static CancellationTokenSource _cancellationTokenSource;
 
         public static void Start()
         {
             Stop();
-
+            _cancellationTokenSource = new CancellationTokenSource();
             _keepThreadRunning = true;
             _sender = new Thread(new ThreadStart(SenderThread));
             _sender.Start();
@@ -23,8 +25,17 @@ namespace WledSRServer
         public static void Stop()
         {
             _keepThreadRunning = false;
+
+            if (_cancellationTokenSource != null)
+            {
+                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource.Dispose();
+                _cancellationTokenSource = null;
+            }
+
             if (_sender == null)
                 return;
+
             _sender.Join();
             _sender = null;
         }
@@ -75,7 +86,7 @@ namespace WledSRServer
         private static void SenderThread()
         {
             var retryCount = 0;
-            var targetPPS = 45; // Pack("frame") per second (max 50!)
+            var maxPPS = 45; // Pack("frame") per second (max 50!)
 
             while (_keepThreadRunning)
             {
@@ -88,13 +99,13 @@ namespace WledSRServer
                         Debug.WriteLine($"NETWORK Bind");
                         client.Client.Bind(new IPEndPoint(localIPToBind, 0));
 
+                        var swPackageTiming = Stopwatch.StartNew();
                         var swIpCheck = new Stopwatch();
-                        var stopSending = new ManualResetEventSlim();
 
                         if (string.IsNullOrEmpty(Settings.Default.LocalIPToBind))
                             swIpCheck.Start();
 
-                        var tmr = new System.Threading.Timer(new TimerCallback(_ =>
+                        while (_keepThreadRunning)
                         {
                             if (string.IsNullOrEmpty(Settings.Default.LocalIPToBind) && (swIpCheck.Elapsed.TotalSeconds > 5))
                             {
@@ -102,33 +113,33 @@ namespace WledSRServer
                                 if ((client.Client.LocalEndPoint is not IPEndPoint clientEndpoint) ||
                                     clientEndpoint.Address.ToString() != localIPToBind.ToString())
                                 {
-                                    stopSending.Set();
-                                    return;
+                                    break;
                                 }
                                 swIpCheck.Restart();
                             }
 
                             try
                             {
-                                client.Send(Program.ServerContext.Packet.AsByteArray(), endpoint);
+                                Program.ServerContext.PacketUpdated.Wait(_cancellationTokenSource.Token);
+                                if (swPackageTiming.ElapsedMilliseconds > 1000 / maxPPS)
+                                {
+                                    client.Send(Program.ServerContext.Packet.AsByteArray(), endpoint);
+                                    swPackageTiming.Restart();
+
+                                    Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
+                                    if (Program.ServerContext.PacketCounter > 100) Program.ServerContext.PacketCounter = 0;
+                                }
+                                Program.ServerContext.PacketUpdated.Reset();
                             }
                             catch (Exception ex)
                             {
                                 exception = ex;
-                                stopSending.Set();
+                                break;
                             }
 
-                            if (!_keepThreadRunning)
-                                stopSending.Set();
-
                             Program.ServerContext.PacketSendError = false;
-                            Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
-                            if (Program.ServerContext.PacketCounter > 100) Program.ServerContext.PacketCounter = 0;
-                        }), null, 0, 1000 / targetPPS);
+                        }
 
-                        stopSending.Wait();
-
-                        tmr.Dispose();
                         client.Close();
                     }
                 }
@@ -145,7 +156,7 @@ namespace WledSRServer
                     // log, restart
                     Program.ServerContext.PacketSendError = true;
                     retryCount++;
-                    if (retryCount == 30)
+                    if (retryCount == 10)
                     {
                         Program.LogException(exception);
                         _keepThreadRunning = false;

@@ -108,6 +108,7 @@ namespace WledSRServer
                 if (e.BytesRecorded == 0)
                 {
                     packet.SetToZero();
+                    Program.ServerContext.PacketUpdated.Set();
                     return;
                 }
 
@@ -131,6 +132,7 @@ namespace WledSRServer
                 if (valMax < 0.00001)
                 {
                     packet.SetToZero();
+                    Program.ServerContext.PacketUpdated.Set();
                     return;
                 }
 
@@ -204,7 +206,7 @@ namespace WledSRServer
 
                 // ===[ Rinse and repeat ]================================================================================================
 
-                Program.ServerContext.AudioProcessMs = (int)sw.ElapsedMilliseconds;
+                Program.ServerContext.PacketUpdated.Set();
             };
 
             // _capture.RecordingStopped += (s, e) =>
