@@ -31,6 +31,13 @@ internal class Program
 
             if (!IsInDesigner)
             {
+                if (Settings.Default.UpdateSettings)
+                {
+                    Settings.Default.Upgrade();
+                    Settings.Default.UpdateSettings = false;
+                    Settings.Default.Save();
+                }
+
                 AudioCapture.Start();
                 Network.Start();
             }
