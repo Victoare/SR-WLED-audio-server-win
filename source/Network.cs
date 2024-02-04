@@ -84,6 +84,7 @@ namespace WledSRServer
                 {
                     using (var client = new UdpClient(AddressFamily.InterNetwork))
                     {
+                        Debug.WriteLine($"NETWORK Bind");
                         client.Client.Bind(new IPEndPoint(localIPToBind, 0));
 
                         var sw = new Stopwatch();
@@ -92,6 +93,13 @@ namespace WledSRServer
                         var tmr = new System.Threading.Timer(new TimerCallback(_ =>
                         {
                             sw.Restart();
+
+                            if ((client.Client.LocalEndPoint is not IPEndPoint clientEndpoint) || clientEndpoint.Address.ToString() != localIPToBind.ToString())
+                            {
+                                // sometimes after Hibernation the automatic IP detection (when Properties.Settings.Default.LocalIPToBind is empty) detects the wrong address
+                                stopSending.Set();
+                                return;
+                            }
 
                             try
                             {
@@ -119,6 +127,7 @@ namespace WledSRServer
                 }
                 catch (Exception ex)
                 {
+                    Debug.WriteLine($"NETWORK client error: {ex}");
                     exception = ex;
                 }
 
@@ -136,6 +145,7 @@ namespace WledSRServer
                     }
                     else
                     {
+                        Debug.WriteLine($"NETWORK ErrCount:{retryCount} - sleeping");
                         Thread.Sleep(1000);
                     }
                 }
