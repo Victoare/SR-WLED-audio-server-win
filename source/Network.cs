@@ -107,7 +107,8 @@ namespace WledSRServer
                                 stopSending.Set();
 
                             Program.ServerContext.PacketSendError = false;
-                            Program.ServerContext.PacketCounter++;
+                            Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
+                            if (Program.ServerContext.PacketCounter > 100) Program.ServerContext.PacketCounter = 0;
                         }), null, 0, 1000 / targetPPS);
 
                         stopSending.Wait();
