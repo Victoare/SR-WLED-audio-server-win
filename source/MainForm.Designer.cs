@@ -135,7 +135,6 @@ namespace WledSRServer
             label6.TabIndex = 16;
             label6.Text = "Hz";
             label6.TextAlign = ContentAlignment.MiddleCenter;
-            toolTip1.SetToolTip(label6, "IP address of the local machine (if needed)");
             // 
             // txtFFTUpper
             // 
@@ -158,7 +157,6 @@ namespace WledSRServer
             label5.TabIndex = 15;
             label5.Text = "-";
             label5.TextAlign = ContentAlignment.MiddleCenter;
-            toolTip1.SetToolTip(label5, "IP address of the local machine (if needed)");
             // 
             // label4
             // 
@@ -170,7 +168,7 @@ namespace WledSRServer
             label4.TabIndex = 0;
             label4.Text = "FFT range";
             label4.TextAlign = ContentAlignment.MiddleCenter;
-            toolTip1.SetToolTip(label4, "IP address of the local machine (if needed)");
+            toolTip1.SetToolTip(label4, "Low and high end of the analyzed FFT spectrum");
             // 
             // txtFFTLower
             // 
