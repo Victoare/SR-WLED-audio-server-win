@@ -38,10 +38,14 @@ If the app was started with the main form open then when you close the form with
 
 That's all folks, I hope it will run smoothly :)
 
-## "Install"
+## "Install" / update
 
-Download the latest version from [releases](https://github.com/Victoare/SR-WLED-audio-server-win/releases/latest) and put it somewhere on your machine. If you set it to auto run and move the exe somewhere else, you have to set it again.
-The app is a portable one, without any fancy installer, but it needs .NET 8.0 runtime. If you don't have it already installed then at the start you will be prompted to do so (giving you the link to the .NET installer)
+To install, download the latest version from [releases](https://github.com/Victoare/SR-WLED-audio-server-win/releases/latest) (WledSRServer.zip) and put it somewhere on your machine. 
+The app is a portable one, without any fancy installer, but it needs .NET 8.0 runtime, so if you don't have the runtime already installed then you will be prompted to do so (giving you the link to the .NET installer) at start.
+
+To update, just download the next version, stop the server if running, and overwrite the old one with the new.
+
+Note: If you set the app to auto run and move the exe somewhere else, you have to set it again.
 
 ## Libraries / assets
 - https://github.com/naudio/NAudio - for capturing the audio
@@ -55,9 +59,7 @@ Some usefull links:
 - https://github.com/MoonModules/WLED/releases 
 - https://wled-install.github.io/ 
 
-**WLED-sync**
+**Info on WLED-sync**
 - https://github.com/netmindz/WLED-sync
-- https://mm.kno.wled.ge/WLEDSR/UDP-Sound-Sync/
-
-**Usefull info**
+- https://mm.kno.wled.ge/WLEDSR/UDP-Sound-Sync
 - https://github.com/zak-45/WLEDAudioSync-Chataigne-Module/blob/main/WLEDAudioSync.js - packet format (missing padding bytes)
