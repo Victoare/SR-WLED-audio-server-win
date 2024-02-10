@@ -1,4 +1,6 @@
-﻿namespace WledSRServer
+﻿using System.Diagnostics;
+
+namespace WledSRServer
 {
     public partial class FFTDisplay : UserControl
     {
@@ -17,36 +19,27 @@
         private void SetupRedrawOnNewPacket()
         {
             var cancelUpdate = new CancellationTokenSource();
-            new Thread(new ThreadStart(() =>
-            {
-                while (!cancelUpdate.IsCancellationRequested && !DesignMode)
-                {
-                    try
-                    {
-                        Program.ServerContext.PacketUpdated.Wait(500, cancelUpdate.Token);
-                    }
-                    catch
-                    {
-                    }
-                    Invalidate();
-                }
-            })).Start();
+
+            AudioCaptureManager.PacketUpdated += PacketUpdated;
+
             Disposed += (s, e) =>
             {
+                AudioCaptureManager.PacketUpdated -= PacketUpdated;
                 cancelUpdate.Cancel();
             };
+        }
+
+        // needed to be able to properly unregister from the event!
+        private void PacketUpdated()
+        {
+            Invalidate();
         }
 
         private void FFTDisplay_MouseMove(object? sender, MouseEventArgs e)
         {
             var mouseX = e.Location.X;
             var undexRextIdx = _rectanglesFull.Select((r, idx) => new { x0 = r.X, x1 = r.X + r.Width, idx }).FirstOrDefault(r => r.x0 <= mouseX && r.x1 >= mouseX)?.idx;
-            toolTip1.SetToolTip(this, (undexRextIdx == null || AudioCapture.FFTfreqBands == null) ? null : AudioCapture.FFTfreqBands[undexRextIdx.Value]);
-        }
-
-        private void ToolTip1_Draw(object? sender, DrawToolTipEventArgs e)
-        {
-            throw new NotImplementedException();
+            toolTip1.SetToolTip(this, (undexRextIdx == null || AudioCaptureManager.FFTfreqBands == null) ? null : AudioCaptureManager.FFTfreqBands[undexRextIdx.Value]);
         }
 
         private const int PADDING = 4;

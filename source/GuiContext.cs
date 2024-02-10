@@ -1,4 +1,6 @@
-﻿namespace WledSRServer
+﻿using System.Net;
+
+namespace WledSRServer
 {
     internal class GuiContext : ApplicationContext
     {
@@ -23,10 +25,21 @@
             _notifyIcon.DoubleClick += (s, o) => ShowMainForm();
             _notifyIcon.Visible = true;
 
+            if (!IsLocalIPSettingCorrect())
+                ShowMainForm(showSettings: true);
+
             if (!Properties.Settings.Default.StartWithoutGUI)
                 ShowMainForm();
             else
                 _showIconInfo = false;
+        }
+
+        private bool IsLocalIPSettingCorrect()
+        {
+            var localIpSetting = Properties.Settings.Default.LocalIPToBind;
+            if (string.IsNullOrEmpty(localIpSetting)) return true;
+            if (IPAddress.TryParse(localIpSetting, out var localIp) && NetworkManager.TestLocalIP(localIp, out var _)) return true;
+            return false;
         }
 
         protected override void Dispose(bool disposing)
@@ -46,7 +59,7 @@
             Application.Exit();
         }
 
-        private void ShowMainForm()
+        private void ShowMainForm(bool showSettings = false)
         {
             if (_mainForm?.Visible == true)
             {
@@ -55,9 +68,11 @@
             }
             else
             {
-                _mainForm = _mainForm ?? new MainForm();
+                _mainForm ??= new MainForm();
                 _mainForm.Show();
             }
+            if (showSettings)
+                _mainForm.ShowSettings();
         }
 
         internal void FormClosed(CloseReason closeReason)

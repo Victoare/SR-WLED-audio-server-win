@@ -30,9 +30,9 @@ namespace WledSRServer
             btnSetAutoRun.CheckboxChecked = AdminFunctions.GetAutoRun();
             btnSetStartupGUI.CheckboxChecked = Properties.Settings.Default.StartWithoutGUI;
 
-            ddlAudioDevices.DataSource = AudioCapture.GetDevices();
-            ddlAudioDevices.DisplayMember = nameof(AudioCapture.SimpleDeviceDescriptor.Name);
-            ddlAudioDevices.ValueMember = nameof(AudioCapture.SimpleDeviceDescriptor.ID);
+            ddlAudioDevices.DataSource = AudioCaptureManager.GetDevices();
+            ddlAudioDevices.DisplayMember = nameof(AudioCaptureManager.SimpleDeviceDescriptor.Name);
+            ddlAudioDevices.ValueMember = nameof(AudioCaptureManager.SimpleDeviceDescriptor.ID);
             ddlAudioDevices.SelectedValue = Properties.Settings.Default.AudioCaptureDeviceId;
             ddlAudioDevices.SelectedIndexChanged += ddlAudioDevices_Changed;
 
@@ -42,7 +42,7 @@ namespace WledSRServer
             txtUdpPort.AutoCompleteSource = AutoCompleteSource.CustomSource;
             txtUdpPort.TextChanged += txtUdpPort_TextChanged;
 
-            txtLocalIpAddress.AutoCompleteCustomSource.AddRange(Network.GetLocalIPAddresses());
+            txtLocalIpAddress.AutoCompleteCustomSource.AddRange(NetworkManager.GetLocalIPAddresses());
             txtLocalIpAddress.AutoCompleteMode = AutoCompleteMode.Suggest;
             txtLocalIpAddress.AutoCompleteSource = AutoCompleteSource.CustomSource;
             txtLocalIpAddress.Text = Properties.Settings.Default.LocalIPToBind;
@@ -73,19 +73,44 @@ namespace WledSRServer
                 }
                 lblPPS.Text = $"Packet per second : {pps:D}";
             }
-            if (Program.ServerContext.PacketSendError)
+
+            if (Program.ServerContext.PacketSendingStatus == PacketSendingStatus.Error)
             {
                 lblPPS.ForeColor = Color.Red;
-                toolTip1.SetToolTip(lblPPS, "There is some problem sending out the packages.");
+                SetToolTip(lblPPS, $"There is some problem sending out the packages.\nError: {Program.ServerContext.PacketSendErrorMessage}");
             }
             else
             {
-                lblPPS.ForeColor = Program.ServerContext.PacketSendError ? Color.Red : Color.FromKnownColor(KnownColor.ControlText);
-                toolTip1.SetToolTip(lblPPS, null);
+                lblPPS.ForeColor = Color.FromKnownColor(KnownColor.ControlText);
+                SetToolTip(lblPPS, null);
             }
 
-            lblCapturing.BackColor = AudioCapture.Capturing ? Color.LightGreen : Color.FromKnownColor(KnownColor.Control);
+            switch (Program.ServerContext.AudioCaptureStatus)
+            {
+                case AudioCaptureStatus.unknown:
+                    lblCapturing.BackColor = Color.FromKnownColor(KnownColor.Control);
+                    SetToolTip(lblCapturing, "Audio capture is not initialized yet.");
+                    break;
+                case AudioCaptureStatus.Capturing_Sound:
+                    lblCapturing.BackColor = Color.LightGreen;
+                    SetToolTip(lblCapturing, "Capturing sound.");
+                    break;
+                case AudioCaptureStatus.Capturing_Silence:
+                    lblCapturing.BackColor = Color.Gold;
+                    SetToolTip(lblCapturing, "Capturing silence.");
+                    break;
+                case AudioCaptureStatus.Error:
+                    lblCapturing.BackColor = Color.Tomato;
+                    SetToolTip(lblCapturing, $"There are some error during capturing. Try to change the audio input.\nError: {Program.ServerContext.AudioCaptureErrorMessage}");
+                    break;
+            }
         }
+
+        private void SetToolTip(Control control, string? toolTip)
+        {
+            toolTip1.SetToolTip(control, toolTip);
+        }
+
         private void btnSettings_Click(object sender, EventArgs e)
         {
             grpSettings.Visible = !grpSettings.Visible;
@@ -117,41 +142,52 @@ namespace WledSRServer
             if (!int.TryParse(txtUdpPort.Text, out var udpport) || udpport < 0 || udpport > 65535)
             {
                 txtUdpPort.BackColor = Color.Salmon;
-                toolTip1.SetToolTip(txtUdpPort, "Not a valid port number");
+                SetToolTip(txtUdpPort, "Not a valid port number");
                 return;
             }
-            toolTip1.SetToolTip(txtUdpPort, null);
+            SetToolTip(txtUdpPort, null);
             txtUdpPort.BackColor = Color.White;
 
             Properties.Settings.Default.WledUdpMulticastPort = udpport;
             Properties.Settings.Default.Save();
-            Network.Start();
+            NetworkManager.ReStart();
         }
 
         private void txtLocalIpAddress_Changed(object? sender, EventArgs e)
         {
             var newIpAddress = txtLocalIpAddress.Text;
-            if (!string.IsNullOrEmpty(newIpAddress) && (!IPAddress.TryParse(newIpAddress, out var newAddress) || !Network.TestLocalIP(newAddress)))
+            if (!string.IsNullOrEmpty(newIpAddress))
             {
-                txtLocalIpAddress.BackColor = Color.Salmon;
-                toolTip1.SetToolTip(txtLocalIpAddress, "Not valid IP address or there is a problem using it.");
-                return;
+                if (!IPAddress.TryParse(newIpAddress, out var newAddress))
+                {
+                    txtLocalIpAddress.BackColor = Color.Salmon;
+                    SetToolTip(txtLocalIpAddress, "Not valid IP address.");
+                    return;
+                }
+                if (!NetworkManager.TestLocalIP(newAddress, out var errorMessage))
+                {
+                    txtLocalIpAddress.BackColor = Color.Salmon;
+                    var err = "There is a problem with this IP address.";
+                    if (!string.IsNullOrEmpty(errorMessage)) err += $"\nError: {errorMessage}";
+                    SetToolTip(txtLocalIpAddress, err);
+                    return;
+                }
             }
-            toolTip1.SetToolTip(txtLocalIpAddress, null);
+            SetToolTip(txtLocalIpAddress, null);
             txtLocalIpAddress.BackColor = Color.White;
 
             Properties.Settings.Default.LocalIPToBind = newIpAddress;
             Properties.Settings.Default.Save();
-            Network.Start();
+            NetworkManager.ReStart();
         }
 
         private void ddlAudioDevices_Changed(object sender, EventArgs e)
         {
-            var selected = ddlAudioDevices.SelectedItem as AudioCapture.SimpleDeviceDescriptor;
+            var selected = ddlAudioDevices.SelectedItem as AudioCaptureManager.SimpleDeviceDescriptor;
             if (selected == null) return;
             Properties.Settings.Default.AudioCaptureDeviceId = selected.ID;
-            if (AudioCapture.Start())
-                Properties.Settings.Default.Save();
+            Properties.Settings.Default.Save();
+            AudioCaptureManager.RestartCapture();
         }
 
         private void txtFFTLower_TextChanged(object sender, EventArgs e)
@@ -159,15 +195,15 @@ namespace WledSRServer
             if (!int.TryParse(txtFFTLower.Text, out var newValue) || newValue < 1 || newValue >= Properties.Settings.Default.FFTHigh)
             {
                 txtFFTLower.BackColor = Color.Salmon;
-                toolTip1.SetToolTip(txtFFTLower, "Needs to be a number between 1 and the higher end of the range");
+                SetToolTip(txtFFTLower, "Needs to be a number between 1 and the higher end of the range");
                 return;
             }
-            toolTip1.SetToolTip(txtFFTLower, null);
+            SetToolTip(txtFFTLower, null);
             txtFFTLower.BackColor = Color.White;
 
             Properties.Settings.Default.FFTLow = newValue;
             Properties.Settings.Default.Save();
-            AudioCapture.Start();
+            AudioCaptureManager.RestartCapture();
         }
 
         private void txtFFTUpper_TextChanged(object sender, EventArgs e)
@@ -175,21 +211,27 @@ namespace WledSRServer
             if (!int.TryParse(txtFFTUpper.Text, out var newValue) || newValue > 99999 || newValue <= Properties.Settings.Default.FFTLow)
             {
                 txtFFTUpper.BackColor = Color.Salmon;
-                toolTip1.SetToolTip(txtFFTUpper, "Needs to be a number between the lower end of the range and 99999");
+                SetToolTip(txtFFTUpper, "Needs to be a number between the lower end of the range and 99999");
                 return;
             }
-            toolTip1.SetToolTip(txtFFTUpper, null);
+            SetToolTip(txtFFTUpper, null);
             txtFFTUpper.BackColor = Color.White;
 
             Properties.Settings.Default.FFTHigh = newValue;
             Properties.Settings.Default.Save();
-            AudioCapture.Start();
+            AudioCaptureManager.RestartCapture();
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             base.OnFormClosed(e);
             Program.GuiContext.FormClosed(e.CloseReason);
+        }
+
+        internal void ShowSettings()
+        {
+            txtLocalIpAddress_Changed(null, null); //re-check
+            grpSettings.Visible = true;
         }
     }
 }

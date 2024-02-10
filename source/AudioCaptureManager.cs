@@ -1,12 +1,12 @@
 ﻿using FftSharp;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using System.Data;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace WledSRServer
 {
-    internal static class AudioCapture
+    internal static class AudioCaptureManager
     {
         #region GetDevices
 
@@ -23,15 +23,68 @@ namespace WledSRServer
 
         #endregion
 
-        private static WasapiCapture? _capture;
-
-        public static bool Capturing => _capture?.CaptureState == CaptureState.Capturing;
         public static string[]? FFTfreqBands;
 
-        public static bool Start()
-        {
-            Stop();
+        public delegate void PacketUpdatedHandler();
+        public static event PacketUpdatedHandler? PacketUpdated;
 
+        private static Thread? _managerThread;
+        private static WasapiCapture? _capture;
+        private static volatile bool _autoRestartCapture = false;
+        private static ManualResetEventSlim _captureStopped = new(false);
+
+        public static void Run()
+        {
+            _autoRestartCapture = true;
+            _managerThread = new Thread(new ThreadStart(RunThread)) { Name = "Audio input" };
+            _managerThread.Start();
+        }
+
+        public static void Stop()
+        {
+            _autoRestartCapture = false;
+            _capture?.StopRecording();
+
+            if (_managerThread == null)
+                return;
+
+            _managerThread.Join();
+            _managerThread = null;
+        }
+
+        public static void RestartCapture()
+        {
+            _capture?.StopRecording();
+        }
+
+        private static void RunThread()
+        {
+            var audioDeviceEventWatcher = new AudioDeviceEventWatcher();
+            audioDeviceEventWatcher.DefaultDeviceChanged += (flow, role, defaultDeviceId) =>
+            {
+                Debug.WriteLine("ADEW: DefaultDeviceChanged");
+                if (string.IsNullOrEmpty(Properties.Settings.Default.AudioCaptureDeviceId))
+                {
+                    RestartCapture();
+                }
+            };
+
+            while (_autoRestartCapture)
+            {
+                if (!StartCapture())
+                {
+                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Error;
+                    Thread.Sleep(1000); // wait a bit to restart
+                    continue;
+                }
+                _captureStopped.Wait(); // wait capturing to stop
+            }
+
+            audioDeviceEventWatcher.Dispose();
+        }
+
+        private static bool SetupCaptureDevice()
+        {
             try
             {
                 var deviceId = Properties.Settings.Default.AudioCaptureDeviceId;
@@ -40,47 +93,46 @@ namespace WledSRServer
                 else
                     _capture = new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId));
             }
-            catch (COMException)
+            catch (Exception ex)
             {
+                Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Error;
+                Program.ServerContext.AudioCaptureErrorMessage = ex.Message;
                 _capture?.Dispose();
                 _capture = null;
                 return false;
             }
+            return true;
+        }
+
+        private static bool StartCapture()
+        {
+            Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.unknown;
+
+            StopCapture();
+
+            if (!SetupCaptureDevice())
+                return false;
+
+            _captureStopped.Reset();
 
             var channelToCapture = 0;
 
-            // Console.WriteLine($"Capture WaveFormat: {capture.WaveFormat}");
+            Debug.WriteLine($"AUDIO: Capture WaveFormat: {_capture.WaveFormat}");
             if (_capture.WaveFormat.Channels < 1)
             {
-                // Console.Write($"Zero channel detected. We need at least one.");
+                Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Error;
+                Program.ServerContext.AudioCaptureErrorMessage = "Zero channel detected. We need at least one.";
                 return false;
             }
 
             // NOTE: https://github.com/naudio/NAudio/issues/900 (WasapiLoopbackCapture WaveFormat conversion)
 
-            Func<byte[], int, double> converter;
-            switch (_capture.WaveFormat.BitsPerSample)
+            var converter = GetConverter(_capture.WaveFormat);
+            if (converter == null)
             {
-                case 8:
-                    converter = (buffer, position) => (sbyte)buffer[position]; // - probably bad, need test case
-                    break;
-                case 16:
-                    converter = (buffer, position) => BitConverter.ToInt16(buffer, position); // needs test case
-                    break;
-                // case 24:
-                //     // 3 byte => int32
-                //     converter = (buffer, position) => BitConverter.ToInt32(buffer, position);
-                //     byteStep = 3;
-                //     break;
-                case 32:
-                    if (_capture.WaveFormat.Encoding == WaveFormatEncoding.IeeeFloat)
-                        converter = (buffer, position) => BitConverter.ToSingle(buffer, position);
-                    else
-                        converter = (buffer, position) => BitConverter.ToInt32(buffer, position); // needs test case
-                    break;
-                default:
-                    Console.Write("Unsupported format");
-                    return false;
+                Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Error;
+                Program.ServerContext.AudioCaptureErrorMessage = $"AUDIO: Unsupported wave format: {_capture.WaveFormat}";
+                return false;
             }
 
             var fftWindow = new FftSharp.Windows.Hanning();
@@ -96,19 +148,18 @@ namespace WledSRServer
             var freqDiv = maxFreq / minFreq;
             var freqBands = Enumerable.Range(0, outputBands + 1).Select(i => minFreq * Math.Pow(freqDiv, (double)i / outputBands)).ToArray();
 
-            var sw = new Stopwatch();
-
             double agcMaxValue = 0;
             var buckets = new double[outputBands];
             FFTfreqBands = new string[outputBands];
 
             _capture.DataAvailable += (s, e) =>
             {
-                sw.Restart();
                 if (e.BytesRecorded == 0)
                 {
                     packet.SetToZero();
-                    Program.ServerContext.PacketUpdated.Set();
+                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Silence;
+                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
+                    PacketUpdated?.Invoke();
                     return;
                 }
 
@@ -132,9 +183,16 @@ namespace WledSRServer
                 if (valMax < 0.00001)
                 {
                     packet.SetToZero();
-                    Program.ServerContext.PacketUpdated.Set();
+                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Silence;
+                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
+                    PacketUpdated?.Invoke();
                     return;
                 }
+
+                // ===[ Got sound ]===========================================================================================
+
+                Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
+                Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
 
                 // ===[ FFT ]================================================================================================
 
@@ -206,20 +264,27 @@ namespace WledSRServer
 
                 // ===[ Rinse and repeat ]================================================================================================
 
-                Program.ServerContext.PacketUpdated.Set();
+                PacketUpdated?.Invoke();
             };
 
-            // _capture.RecordingStopped += (s, e) =>
-            // {
-            //     Program.ServerContext.KeepRunning = false;
-            // };
+            _capture.RecordingStopped += (s, e) =>
+            {
+                if (e.Exception != null)
+                {
+                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Error;
+                    Program.ServerContext.AudioCaptureErrorMessage = e.Exception.Message;
+                }
+                _captureStopped.Set();
+            };
 
             try
             {
                 _capture.StartRecording();
             }
-            catch (COMException)
+            catch (Exception ex)
             {
+                Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Error;
+                Program.ServerContext.AudioCaptureErrorMessage = ex.Message;
                 _capture?.Dispose();
                 _capture = null;
                 return false;
@@ -228,19 +293,44 @@ namespace WledSRServer
             return true;
         }
 
-        public static void Stop()
+        private static void StopCapture()
         {
             if (_capture == null)
                 return;
 
-            _capture.StopRecording();
-            while (_capture.CaptureState != CaptureState.Stopped)
-                Thread.Sleep(100);
+            if (_capture.CaptureState != CaptureState.Stopped)
+            {
+                _capture.StopRecording();
+                while (_capture.CaptureState != CaptureState.Stopped)
+                    Thread.Sleep(100);
+            }
 
-            _capture.Dispose();
+            _capture?.Dispose();
             _capture = null;
         }
 
+        private static Func<byte[], int, double>? GetConverter(WaveFormat waveFormat)
+        {
+            switch (waveFormat.BitsPerSample)
+            {
+                case 8:
+                    return (buffer, position) => (sbyte)buffer[position]; // - probably bad, need test case
+                case 16:
+                    return (buffer, position) => BitConverter.ToInt16(buffer, position); // needs test case
+                // case 24:
+                //     // 3 byte => int32
+                //     converter = (buffer, position) => BitConverter.ToInt32(buffer, position);
+                //     byteStep = 3;
+                //     break;
+                case 32:
+                    if (waveFormat.Encoding == WaveFormatEncoding.IeeeFloat)
+                        return (buffer, position) => BitConverter.ToSingle(buffer, position);
+                    else
+                        return (buffer, position) => BitConverter.ToInt32(buffer, position); // needs test case
+                    break;
+            }
 
+            return null;
+        }
     }
 }

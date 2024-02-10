@@ -6,37 +6,34 @@ using WledSRServer.Properties;
 
 namespace WledSRServer
 {
-    internal static class Network
+    internal static class NetworkManager
     {
-        private static Thread? _sender;
+        private static Thread? _managerThread;
         private volatile static bool _keepThreadRunning = true;
-        private static CancellationTokenSource _cancellationTokenSource;
+        private volatile static AutoResetEvent _restartNetworkClient = new(false);
 
-        public static void Start()
+        public static void Run()
         {
-            Stop();
-            _cancellationTokenSource = new CancellationTokenSource();
             _keepThreadRunning = true;
-            _sender = new Thread(new ThreadStart(SenderThread));
-            _sender.Start();
+            _managerThread = new Thread(new ThreadStart(SenderThread)) { Name = "Network send" };
+            _managerThread.Start();
+        }
+
+        public static void ReStart()
+        {
+            _restartNetworkClient.Set();
         }
 
         public static void Stop()
         {
             _keepThreadRunning = false;
+            _restartNetworkClient.Set();
 
-            if (_cancellationTokenSource != null)
-            {
-                _cancellationTokenSource.Cancel();
-                _cancellationTokenSource.Dispose();
-                _cancellationTokenSource = null;
-            }
-
-            if (_sender == null)
+            if (_managerThread == null)
                 return;
 
-            _sender.Join();
-            _sender = null;
+            _managerThread.Join();
+            _managerThread = null;
         }
 
         public static string[] GetLocalIPAddresses()
@@ -63,7 +60,7 @@ namespace WledSRServer
             }
         }
 
-        public static bool TestLocalIP(IPAddress localIp)
+        public static bool TestLocalIP(IPAddress localIp, out string? error)
         {
             try
             {
@@ -75,16 +72,18 @@ namespace WledSRServer
                     client.Close();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                error = ex.Message;
                 return false;
             }
+
+            error = null;
             return true;
         }
 
         private static void SenderThread()
         {
-            var retryCount = 0;
             var maxPPS = 45; // Pack("frame") per second (max 50!)
 
             while (_keepThreadRunning)
@@ -95,49 +94,63 @@ namespace WledSRServer
                 {
                     using (var client = new UdpClient(AddressFamily.InterNetwork))
                     {
-                        Debug.WriteLine($"NETWORK Bind");
+                        Debug.WriteLine($"NETWORK: Bind");
                         client.Client.Bind(new IPEndPoint(localIPToBind, 0));
 
-                        var swPackageTiming = Stopwatch.StartNew();
-                        var swIpCheck = new Stopwatch();
+                        #region Check if default local ip has changed (and reset client if needed)
+
+                        System.Threading.Timer? ipCheckTimer = null;
 
                         if (string.IsNullOrEmpty(Settings.Default.LocalIPToBind))
-                            swIpCheck.Start();
-
-                        while (_keepThreadRunning)
                         {
-                            if (string.IsNullOrEmpty(Settings.Default.LocalIPToBind) && (swIpCheck.Elapsed.TotalSeconds > 5))
+                            // sometimes after Hibernation the automatic IP detection (when Properties.Settings.Default.LocalIPToBind is empty) detects the wrong address
+                            ipCheckTimer = new System.Threading.Timer(new TimerCallback((_) =>
                             {
-                                // sometimes after Hibernation the automatic IP detection (when Properties.Settings.Default.LocalIPToBind is empty) detects the wrong address
                                 if ((client.Client.LocalEndPoint is not IPEndPoint clientEndpoint) ||
                                     clientEndpoint.Address.ToString() != localIPToBind.ToString())
                                 {
-                                    break;
+                                    _restartNetworkClient.Set();
                                 }
-                                swIpCheck.Restart();
-                            }
+                            }), null, 0, 5000);
 
+                        }
+
+                        #endregion
+
+                        var swPackageTiming = Stopwatch.StartNew();
+                        var sendPacket = new Action(() =>
+                        {
                             try
                             {
-                                Program.ServerContext.PacketUpdated.Wait(_cancellationTokenSource.Token);
                                 if (swPackageTiming.ElapsedMilliseconds > 1000 / maxPPS)
                                 {
                                     client.Send(Program.ServerContext.Packet.AsByteArray(), endpoint);
+                                    Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Sending;
+                                    Program.ServerContext.PacketSendErrorMessage = string.Empty;
                                     swPackageTiming.Restart();
 
                                     Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
                                     if (Program.ServerContext.PacketCounter > 100) Program.ServerContext.PacketCounter = 0;
                                 }
-                                Program.ServerContext.PacketUpdated.Reset();
                             }
                             catch (Exception ex)
                             {
                                 exception = ex;
-                                break;
+                                _restartNetworkClient.Set();
                             }
+                        });
 
-                            Program.ServerContext.PacketSendError = false;
-                        }
+                        // Send packets even without audio
+                        var autoPacketTimer = new System.Threading.Timer(new TimerCallback((_) => sendPacket()), null, 500, 500);
+
+                        var sendPacketHandler = new AudioCaptureManager.PacketUpdatedHandler(sendPacket);
+                        AudioCaptureManager.PacketUpdated += sendPacketHandler;
+
+                        _restartNetworkClient.WaitOne();
+
+                        AudioCaptureManager.PacketUpdated -= sendPacketHandler;
+                        autoPacketTimer?.Dispose();
+                        ipCheckTimer?.Dispose();
 
                         client.Close();
                     }
@@ -148,23 +161,17 @@ namespace WledSRServer
                     exception = ex;
                 }
 
+                // ===[ Check for exception during send ]======================================================================
+
                 if (exception != null)
                 {
                     // resume after after hibernation causes exceptions => ex.SocketErrorCode==SocketError.NoBufferSpaceAvailable
                     // TODO: Maybe differentiate between exceptions?
                     // log, restart
-                    Program.ServerContext.PacketSendError = true;
-                    retryCount++;
-                    if (retryCount == 10)
-                    {
-                        Program.LogException(exception);
-                        _keepThreadRunning = false;
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"NETWORK ErrCount:{retryCount} - sleeping");
-                        Thread.Sleep(1000);
-                    }
+                    Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Error;
+                    Program.ServerContext.PacketSendErrorMessage = exception.Message;
+                    Debug.WriteLine($"NETWORK error - sleeping");
+                    Thread.Sleep(1000);
                 }
             }
         }

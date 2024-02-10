@@ -18,6 +18,11 @@ internal class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        var culture = new System.Globalization.CultureInfo("en-US"); // For english error messages
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
+        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
+        Application.CurrentCulture = culture;
+
         if (Arg_SetAutoRun(args))
             return;
 
@@ -38,8 +43,8 @@ internal class Program
                     Settings.Default.Save();
                 }
 
-                AudioCapture.Start();
-                Network.Start();
+                AudioCaptureManager.Run();
+                NetworkManager.Run();
             }
 
             Application.EnableVisualStyles();
@@ -51,8 +56,8 @@ internal class Program
 
             if (!IsInDesigner)
             {
-                AudioCapture.Stop();
-                Network.Stop();
+                AudioCaptureManager.Stop();
+                NetworkManager.Stop();
             }
         }
     }
