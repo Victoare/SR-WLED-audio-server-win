@@ -47,6 +47,15 @@ To update, just download the next version, stop the server if running, and overw
 
 Note: If you set the app to auto run and move the exe somewhere else, you have to set it again.
 
+## Connection issues
+
+Due to the nature of UDP, especially UDP multicast (the connection type using by soundreactive wled), the app has no information if the package is reaches any destination or not. Therefore if all the settings seems to be fine there is a slight possibility that the network hardware have issues with this kind of communication. 
+(I am also using consumer grade network equipment to develop and to use this app, so it should work, but there is no guarantee)
+
+A quote from https://mm.kno.wled.ge/WLEDSR/UDP-Sound-Sync :
+
+`UDP multicast is generally not very reliable with typical "consumer grade hardware". Some users found that creating a "port forwarding rule" on their local Wifi router helps. For example, you could create a "dynamic port forwarding rule" for UDP port 11988.`
+
 ## Libraries / assets
 - https://github.com/naudio/NAudio - for capturing the audio
 - https://github.com/swharden/FftSharp - for the blazing fast FFT
