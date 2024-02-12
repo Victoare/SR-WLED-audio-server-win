@@ -141,7 +141,11 @@ namespace WledSRServer
                         });
 
                         // Send packets even without audio
-                        var autoPacketTimer = new System.Threading.Timer(new TimerCallback((_) => sendPacket()), null, 500, 500);
+                        var autoPacketTimer = new System.Threading.Timer(new TimerCallback((_) =>
+                        {
+                            if (swPackageTiming.ElapsedMilliseconds < 500) return;
+                            sendPacket();
+                        }), null, 500, 500);
 
                         var sendPacketHandler = new AudioCaptureManager.PacketUpdatedHandler(sendPacket);
                         AudioCaptureManager.PacketUpdated += sendPacketHandler;
