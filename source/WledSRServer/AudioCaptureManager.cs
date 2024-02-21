@@ -1,8 +1,13 @@
-﻿using FftSharp;
-using NAudio.CoreAudioApi;
+﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using System.Data;
 using System.Diagnostics;
+using WledSRServer.AudioProcessor;
+using WledSRServer.AudioProcessor.FFT;
+using WledSRServer.AudioProcessor.FFTBuckets;
+using WledSRServer.AudioProcessor.Packet;
+using WledSRServer.AudioProcessor.Raw;
+using WledSRServer.AudioProcessor.Sample;
 
 namespace WledSRServer
 {
@@ -33,6 +38,8 @@ namespace WledSRServer
         private static volatile bool _autoRestartCapture = false;
         private static ManualResetEventSlim _captureStopped = new(false);
 
+        #region public methods
+
         public static void Run()
         {
             _autoRestartCapture = true;
@@ -56,6 +63,8 @@ namespace WledSRServer
         {
             _capture?.StopRecording();
         }
+
+        #endregion
 
         private static void RunThread()
         {
@@ -115,8 +124,6 @@ namespace WledSRServer
 
             _captureStopped.Reset();
 
-            var channelToCapture = 0;
-
             Debug.WriteLine($"AUDIO: Capture WaveFormat: {_capture.WaveFormat}");
             if (_capture.WaveFormat.Channels < 1)
             {
@@ -127,155 +134,54 @@ namespace WledSRServer
 
             // NOTE: https://github.com/naudio/NAudio/issues/900 (WasapiLoopbackCapture WaveFormat conversion)
 
-            var converter = GetConverter(_capture.WaveFormat);
-            if (converter == null)
+            try
+            {
+                Action onSilence = () =>
+                {
+                    Program.ServerContext.Packet.SetToZero();
+                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Silence;
+                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
+                    PacketUpdated?.Invoke();
+                };
+
+                var chain = new AudioProcessChain();
+                //chain.AddProcessor(new RawLogger("Begin"));
+                chain.AddProcessor(new CheckRawSilence(onSilence));
+                //chain.AddProcessor(new RawAccumulator(50000));
+                //chain.AddProcessor(new RawLogger("After acc"));
+                chain.AddProcessor(new SampleConverter(_capture.WaveFormat));
+                chain.AddProcessor(new CheckSampleSilence(0.00001, onSilence));
+                chain.AddProcessor(new External(() =>
+                {
+                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
+                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
+                }));
+                chain.AddProcessor(new FFTransform(new FftSharp.Windows.FlatTop(), _capture.WaveFormat.SampleRate));
+                chain.AddProcessor(new Bucketizer(16, Bucketizer.Scale.Log,
+                                                      Properties.Settings.Default.FFTLow,
+                                                      Properties.Settings.Default.FFTHigh,
+                                                      Bucketizer.Scale.Linear
+                                                  ));
+                chain.AddProcessor(new External<FFTBucketData>((bucketData) =>
+                {
+                    FFTfreqBands = bucketData.Values.Select(b => $"{b.FreqLow:F0}Hz - {b.FreqHigh:F0}Hz{(b.DataCount == 0 ? " [NO DATA]" : "")}").ToArray();
+                }));
+                // chain.AddProcessor(new BucketAverager(8));
+                chain.AddProcessor(new SetPacket(Program.ServerContext.Packet));
+                chain.AddProcessor(new External(() =>
+                {
+                    PacketUpdated?.Invoke();
+                }));
+
+                _capture.DataAvailable += (s, e) => chain.Process(e.Buffer, e.BytesRecorded);
+            }
+            catch (Exception ex)
             {
                 Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Error;
-                Program.ServerContext.AudioCaptureErrorMessage = $"AUDIO: Unsupported wave format: {_capture.WaveFormat}";
+                Program.ServerContext.AudioCaptureErrorMessage = $"AUDIO: {ex.Message}";
                 return false;
             }
 
-            var fftWindow = new FftSharp.Windows.Hanning();
-
-            var packet = Program.ServerContext.Packet;
-            var outputBands = packet.fftResult.Length;
-
-            // logarithmic freq scale
-            // var minFreq = 20;
-            // var maxFreq = _capture.WaveFormat.SampleRate / 2; // fftFreq[fftFreq.Length - 1];
-            var minFreq = Properties.Settings.Default.FFTLow;
-            var maxFreq = Properties.Settings.Default.FFTHigh;
-            var freqDiv = maxFreq / minFreq;
-            var freqBands = Enumerable.Range(0, outputBands + 1).Select(i => minFreq * Math.Pow(freqDiv, (double)i / outputBands)).ToArray();
-
-            double agcMaxValue = 0;
-            var buckets = new double[outputBands];
-            FFTfreqBands = new string[outputBands];
-
-            _capture.DataAvailable += (s, e) =>
-            {
-                if (e.BytesRecorded == 0)
-                {
-                    packet.SetToZero();
-                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Silence;
-                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
-                    PacketUpdated?.Invoke();
-                    return;
-                }
-
-                // ===[ Collect samples ]================================================================================================
-
-                int sampleCount = e.BytesRecorded / _capture.WaveFormat.BlockAlign;  // All available Sample
-                //sampleCount = (int)Math.Pow(2, Math.Floor(Math.Log2(sampleCount))); // Samples to FFT (must be pow of 2) - or use FftSharp.Pad.ZeroPad(windowed_samples);
-                //freq count = (2^(exponent-1))+1 - 6=33, 7=65, 8=129, 9=257, 10=513, 11=1025 ...
-
-                var values = new double[sampleCount];
-
-                var oneChannelBytes = _capture.WaveFormat.BlockAlign / _capture.WaveFormat.Channels;
-                var pos = 0;
-                for (int i = 0; i < sampleCount; i++)
-                {
-                    var avg = 0.0d;
-                    for (var c = 0; c < _capture.WaveFormat.Channels; c++)
-                    {
-                        avg += converter(e.Buffer, pos);
-                        pos += oneChannelBytes;
-                    }
-                    values[i] = avg / _capture.WaveFormat.Channels;
-
-                    // int position = (i + channelToCapture) * _capture.WaveFormat.BlockAlign;
-                    // values[i] = converter(e.Buffer, position);
-                }
-
-                // Debug.WriteLine($"AudioCapture: {values.Length}"); // 2880 per event
-
-                var valMax = values.Max();
-                if (valMax < 0.00001)
-                {
-                    packet.SetToZero();
-                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Silence;
-                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
-                    PacketUpdated?.Invoke();
-                    return;
-                }
-
-                // ===[ Got sound ]===========================================================================================
-
-                Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
-                Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
-
-                // ===[ FFT ]================================================================================================
-
-                fftWindow.ApplyInPlace(values, true);
-                values = Pad.ZeroPad(values);
-                double[] fftPower = FFT.Magnitude(FFT.Forward(values));
-                double[] fftFreq = FFT.FrequencyScale(fftPower.Length, _capture.WaveFormat.SampleRate);
-
-                // ===[ Peaks ]================================================================================================
-
-                double peakFreq = 0;
-                double peakPower = 0;
-                for (int i = 0; i < fftPower.Length; i++)
-                {
-                    if (fftPower[i] > peakPower)
-                    {
-                        peakPower = fftPower[i];
-                        peakFreq = fftFreq[i];
-                    }
-                }
-
-                // ===[ AGC ]================================================================================================
-
-                if (agcMaxValue < peakPower)
-                    agcMaxValue = peakPower;
-                else
-                    agcMaxValue = (agcMaxValue * 0.9 + peakPower * 0.1);
-
-                // ===[ Output FFT buckets ]================================================================================================
-
-                for (var bucket = 0; bucket < buckets.Length; bucket++)
-                {
-                    var freqRange = fftFreq.Select((freq, idx) => new { freq, idx }).Where(itm => itm.freq >= freqBands[bucket] && itm.freq <= freqBands[bucket + 1]).ToArray();
-                    var bucketCount = 0;
-                    if (freqRange.Any())
-                    {
-                        var min = freqRange.First();
-                        var max = freqRange.Last();
-                        var bucketItems = fftPower.Skip(min.idx).Take(max.idx - min.idx + 1).ToArray();
-                        buckets[bucket] = bucketItems.Max();
-                        bucketCount = bucketItems.Length;
-                        // FFTfreqBands[bucket] = $"{min.freq:f2}hz - {max.freq:f2}hz - {bucketItems.Length} count";
-                    }
-                    else
-                    {
-                        buckets[bucket] = 0;
-                    }
-                    // FFTfreqBands[bucket] = $"{freqBands[bucket]:F0}Hz - {freqBands[bucket + 1]:F0}Hz [{bucketCount} bin]";
-                    FFTfreqBands[bucket] = $"{freqBands[bucket]:F0}Hz - {freqBands[bucket + 1]:F0}Hz";
-                    if (bucketCount == 0) FFTfreqBands[bucket] += " [NO DATA]";
-                }
-
-                // ===[ Set packet properties ]================================================================================================
-
-                var bucketMin = buckets.Min();
-                //var bucketSpan = buckets.Max() - bucketMin;
-                //var bucketSpan = peakPower - bucketMin;
-                var bucketSpan = agcMaxValue - bucketMin;
-                for (var bucket = 0; bucket < buckets.Length; bucket++)
-                    packet.fftResult[bucket] = (byte)((buckets[bucket] - bucketMin) * 255 / bucketSpan);
-
-                var raw = (float)(peakPower / agcMaxValue * 255);
-
-                packet.sampleRaw = raw; // 0...1023 ?
-                packet.sampleSmth = raw;
-                packet.samplePeak = (byte)raw;
-                packet.FFT_Magnitude = raw;
-                packet.FFT_MajorPeak = (float)peakFreq;
-
-                // ===[ Rinse and repeat ]================================================================================================
-
-                PacketUpdated?.Invoke();
-            };
 
             _capture.RecordingStopped += (s, e) =>
             {
@@ -317,30 +223,6 @@ namespace WledSRServer
 
             _capture?.Dispose();
             _capture = null;
-        }
-
-        private static Func<byte[], int, double>? GetConverter(WaveFormat waveFormat)
-        {
-            switch (waveFormat.BitsPerSample)
-            {
-                case 8:
-                    return (buffer, position) => (sbyte)buffer[position]; // - probably bad, need test case
-                case 16:
-                    return (buffer, position) => BitConverter.ToInt16(buffer, position); // needs test case
-                // case 24:
-                //     // 3 byte => int32
-                //     converter = (buffer, position) => BitConverter.ToInt32(buffer, position);
-                //     byteStep = 3;
-                //     break;
-                case 32:
-                    if (waveFormat.Encoding == WaveFormatEncoding.IeeeFloat)
-                        return (buffer, position) => BitConverter.ToSingle(buffer, position);
-                    else
-                        return (buffer, position) => BitConverter.ToInt32(buffer, position); // needs test case
-                    break;
-            }
-
-            return null;
         }
     }
 }

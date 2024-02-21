@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace WledSRServer
+﻿namespace WledSRServer
 {
     public partial class FFTDisplay : UserControl
     {
