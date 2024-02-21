@@ -67,6 +67,7 @@ namespace WledSRServer
                 using (var client = new UdpClient(AddressFamily.InterNetwork))
                 {
                     client.Client.Bind(new IPEndPoint(localIp, 0));
+                    client.MulticastLoopback = false;
                     var testPacket = new byte[5]; // intentionally wrong packet!
                     client.Send(testPacket, endpoint);
                     client.Close();
@@ -96,6 +97,7 @@ namespace WledSRServer
                     {
                         Debug.WriteLine($"NETWORK: Bind");
                         client.Client.Bind(new IPEndPoint(localIPToBind, 0));
+                        client.MulticastLoopback = false;
 
                         #region Check if default local ip has changed (and reset client if needed)
 
