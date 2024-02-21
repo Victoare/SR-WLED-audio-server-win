@@ -171,10 +171,20 @@ namespace WledSRServer
 
                 var values = new double[sampleCount];
 
+                var oneChannelBytes = _capture.WaveFormat.BlockAlign / _capture.WaveFormat.Channels;
+                var pos = 0;
                 for (int i = 0; i < sampleCount; i++)
                 {
-                    int position = (i + channelToCapture) * _capture.WaveFormat.BlockAlign;
-                    values[i] = converter(e.Buffer, position);
+                    var avg = 0.0d;
+                    for (var c = 0; c < _capture.WaveFormat.Channels; c++)
+                    {
+                        avg += converter(e.Buffer, pos);
+                        pos += oneChannelBytes;
+                    }
+                    values[i] = avg / _capture.WaveFormat.Channels;
+
+                    // int position = (i + channelToCapture) * _capture.WaveFormat.BlockAlign;
+                    // values[i] = converter(e.Buffer, position);
                 }
 
                 // Debug.WriteLine($"AudioCapture: {values.Length}"); // 2880 per event
