@@ -68,6 +68,9 @@ Some useful links:
 - https://github.com/MoonModules/WLED/releases 
 - https://wled-install.github.io/ 
 
+**Audioreactive mod source on aircookie's WLED**
+- https://github.com/Aircoookie/WLED/tree/main/usermods/audioreactive
+
 **Info on WLED-sync**
 - https://github.com/netmindz/WLED-sync
 - https://mm.kno.wled.ge/WLEDSR/UDP-Sound-Sync
