@@ -23,13 +23,13 @@ namespace WledSRServer.AudioProcessor.Packet
 
         public override bool Process()
         {
-            if (_agcMaxValue < _fft.PeakValue)
-                _agcMaxValue = _fft.PeakValue;
-            else
-                _agcMaxValue = (_agcMaxValue * 0.9 + _fft.PeakValue * 0.1);
-
             var bucketMinValue = _buckets.Values.Min(b => b.Value);
             var bucketMaxValue = _buckets.Values.Max(b => b.Value);
+
+            if (_agcMaxValue < bucketMaxValue)
+                _agcMaxValue = bucketMaxValue;
+            else
+                _agcMaxValue = (_agcMaxValue * 0.8 + bucketMaxValue * 0.2);
 
             //var bucketSpan = bucketMaxValue - bucketMinValue;
             //var bucketSpan = peakPower - bucketMin;
@@ -44,6 +44,7 @@ namespace WledSRServer.AudioProcessor.Packet
             _packet.sampleRaw = raw; // 0...1023 ?
             _packet.sampleSmth = raw;
             _packet.samplePeak = (byte)raw;
+
             _packet.FFT_Magnitude = raw;
             _packet.FFT_MajorPeak = (float)_fft.PeakFrequency;
 

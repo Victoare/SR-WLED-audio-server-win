@@ -15,12 +15,18 @@
       <Value Profile="(Default)" />
     </Setting>
     <Setting Name="FFTLow" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">20</Value>
+      <Value Profile="(Default)">50</Value>
     </Setting>
     <Setting Name="FFTHigh" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">20000</Value>
+      <Value Profile="(Default)">5000</Value>
     </Setting>
     <Setting Name="UpdateSettings" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="FFTValueScale" Type="System.String" Scope="User">
+      <Value Profile="(Default)">SquareRoot</Value>
+    </Setting>
+    <Setting Name="FFTFreqLogScale" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
   </Settings>

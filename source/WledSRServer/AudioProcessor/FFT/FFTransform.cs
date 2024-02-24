@@ -29,10 +29,13 @@ namespace WledSRServer.AudioProcessor.FFT
             values = Pad.ZeroPad(values);
             _fftWindow.ApplyInPlace(values, true);
 
-            _fft.Values = FftSharp.FFT.Magnitude(FftSharp.FFT.Forward(values), true);
-            //_fft.Values = FftSharp.FFT.Power(FftSharp.FFT.Forward(Values), true);
+            var complexData = FftSharp.FFT.Forward(values);
+            var positiveOnly = true; // using only half of the spectrum
 
-            _fft.Frequencies = FftSharp.FFT.FrequencyScale(_fft.Values.Length, _sampleRate);
+            _fft.Values = FftSharp.FFT.Magnitude(complexData, positiveOnly); // WLED based on Magnitude (Scaling appliend in bucketizer)
+            // _fft.Values = FftSharp.FFT.Power(complexData, positiveOnly);     // value[i] = 20 * Math.Log10(value[i])
+
+            _fft.Frequencies = FftSharp.FFT.FrequencyScale(_fft.Values.Length, _sampleRate, positiveOnly);
 
             for (int i = 0; i < _fft.Values.Length; i++)
             {

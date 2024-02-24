@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net;
+using WledSRServer.AudioProcessor.FFTBuckets;
 
 namespace WledSRServer
 {
@@ -27,16 +28,31 @@ namespace WledSRServer
 
             Text = $"WLED SoundReactive Server - {Program.Version(false)}";
 
+            var settings = Properties.Settings.Default;
+
             btnSetAutoRun.CheckboxChecked = AdminFunctions.GetAutoRun();
-            btnSetStartupGUI.CheckboxChecked = Properties.Settings.Default.StartWithoutGUI;
+            btnSetStartupGUI.CheckboxChecked = settings.StartWithoutGUI;
 
             ddlAudioDevices.DataSource = AudioCaptureManager.GetDevices();
             ddlAudioDevices.DisplayMember = nameof(AudioCaptureManager.SimpleDeviceDescriptor.Name);
             ddlAudioDevices.ValueMember = nameof(AudioCaptureManager.SimpleDeviceDescriptor.ID);
-            ddlAudioDevices.SelectedValue = Properties.Settings.Default.AudioCaptureDeviceId;
+            ddlAudioDevices.SelectedValue = settings.AudioCaptureDeviceId;
             ddlAudioDevices.SelectedIndexChanged += ddlAudioDevices_Changed;
 
-            txtUdpPort.Text = Properties.Settings.Default.WledUdpMulticastPort.ToString();
+            ddlValueScale.ValueMember = "Key";
+            ddlValueScale.DisplayMember = "Value";
+            ddlValueScale.DataSource = (new Dictionary<Bucketizer.Scale, string> {
+                { Bucketizer.Scale.Linear,      "Linear (Amplitude)" },
+                { Bucketizer.Scale.SquareRoot,  "Square Root (Energy)" },
+                { Bucketizer.Scale.Logarithmic, "Logarithmic (Loudness)" }
+            }).ToList();
+            ddlValueScale.SelectedValue = Bucketizer.ScaleFromString(settings.FFTValueScale, Bucketizer.Scale.SquareRoot);
+            ddlValueScale.SelectedIndexChanged += ddlValueScale_Changed;
+
+            chbFFTLogFreq.Checked = settings.FFTFreqLogScale;
+            chbFFTLogFreq.CheckedChanged += ChbFFTLogFreq_Changed;
+
+            txtUdpPort.Text = settings.WledUdpMulticastPort.ToString();
             txtUdpPort.AutoCompleteCustomSource.Add("11988"); // the default one
             txtUdpPort.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
             txtUdpPort.AutoCompleteSource = AutoCompleteSource.CustomSource;
@@ -45,12 +61,12 @@ namespace WledSRServer
             txtLocalIpAddress.AutoCompleteCustomSource.AddRange(NetworkManager.GetLocalIPAddresses());
             txtLocalIpAddress.AutoCompleteMode = AutoCompleteMode.Suggest;
             txtLocalIpAddress.AutoCompleteSource = AutoCompleteSource.CustomSource;
-            txtLocalIpAddress.Text = Properties.Settings.Default.LocalIPToBind;
+            txtLocalIpAddress.Text = settings.LocalIPToBind;
             txtLocalIpAddress.TextChanged += txtLocalIpAddress_Changed;
 
-            txtFFTLower.Text = Properties.Settings.Default.FFTLow.ToString();
+            txtFFTLower.Text = settings.FFTLow.ToString();
             txtFFTLower.TextChanged += txtFFTLower_TextChanged;
-            txtFFTUpper.Text = Properties.Settings.Default.FFTHigh.ToString();
+            txtFFTUpper.Text = settings.FFTHigh.ToString();
             txtFFTUpper.TextChanged += txtFFTUpper_TextChanged;
 
             toolTip1.InitialDelay = 100;
@@ -59,6 +75,8 @@ namespace WledSRServer
             PPSwatch.Start();
             tmrUpdateStats.Enabled = true;
         }
+
+        #region Periodic stats update
 
         private void tmrUpdateStats_Tick(object sender, EventArgs e)
         {
@@ -106,20 +124,38 @@ namespace WledSRServer
             }
         }
 
+        #endregion
+
+        private void btnSettings_Click(object sender, EventArgs e)
+        {
+            pnlSettings.Visible = !pnlSettings.Visible;
+        }
+
+        internal void ShowSettings()
+        {
+            txtLocalIpAddress_Changed(null, null); //re-check
+            pnlSettings.Visible = true;
+        }
+
         private void SetToolTip(Control control, string? toolTip)
         {
             toolTip1.SetToolTip(control, toolTip);
         }
 
-        private void btnSettings_Click(object sender, EventArgs e)
+        #region Close or Exit app
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            grpSettings.Visible = !grpSettings.Visible;
+            base.OnFormClosed(e);
+            Program.GuiContext.FormClosed(e.CloseReason);
         }
 
         private void btnExitApplication_Click(object sender, EventArgs e)
         {
             Program.GuiContext.ExitApp();
         }
+
+        #endregion
 
         private void btnSetAutoRun_Click(object sender, EventArgs e)
         {
@@ -136,6 +172,8 @@ namespace WledSRServer
             Properties.Settings.Default.Save();
             btnSetStartupGUI.CheckboxChecked = newValue;
         }
+
+        #region Network
 
         private void txtUdpPort_TextChanged(object sender, EventArgs e)
         {
@@ -181,6 +219,10 @@ namespace WledSRServer
             NetworkManager.ReStart();
         }
 
+        #endregion
+
+        #region Input device
+
         private void ddlAudioDevices_Changed(object sender, EventArgs e)
         {
             var selected = ddlAudioDevices.SelectedItem as AudioCaptureManager.SimpleDeviceDescriptor;
@@ -189,6 +231,10 @@ namespace WledSRServer
             Properties.Settings.Default.Save();
             AudioCaptureManager.RestartCapture();
         }
+
+        #endregion
+
+        #region FFT
 
         private void txtFFTLower_TextChanged(object sender, EventArgs e)
         {
@@ -222,16 +268,22 @@ namespace WledSRServer
             AudioCaptureManager.RestartCapture();
         }
 
-        protected override void OnFormClosed(FormClosedEventArgs e)
+        private void ChbFFTLogFreq_Changed(object? sender, EventArgs e)
         {
-            base.OnFormClosed(e);
-            Program.GuiContext.FormClosed(e.CloseReason);
+            Properties.Settings.Default.FFTFreqLogScale = chbFFTLogFreq.Checked;
+            Properties.Settings.Default.Save();
+            AudioCaptureManager.RestartCapture();
         }
 
-        internal void ShowSettings()
+        private void ddlValueScale_Changed(object? sender, EventArgs e)
         {
-            txtLocalIpAddress_Changed(null, null); //re-check
-            grpSettings.Visible = true;
+            if (ddlValueScale.SelectedValue == null) return;
+            var selected = (Bucketizer.Scale)ddlValueScale.SelectedValue;
+            Properties.Settings.Default.FFTValueScale = selected.ToString();
+            Properties.Settings.Default.Save();
+            AudioCaptureManager.RestartCapture();
         }
+
+        #endregion
     }
 }

@@ -75,6 +75,18 @@ namespace WledSRServer
             data.FFT_MajorPeak = 0;
         }
 
+        public static void DecayValues(this AudioSyncPacket_v2 data, float decayRate)
+        {
+            data.sampleRaw *= decayRate;
+            data.sampleSmth *= decayRate;
+            //data.samplePeak = ... ;
+            for (var i = 0; i < data.fftResult.Length; i++)
+                data.fftResult[i] = (byte)Math.Floor(data.fftResult[i] * decayRate);
+            data.FFT_Magnitude *= decayRate;
+            //data.FFT_MajorPeak = 0;
+        }
+
+
         public static byte[] AsByteArray(this AudioSyncPacket_v2 data)
         {
             var size = Marshal.SizeOf<AudioSyncPacket_v2>();

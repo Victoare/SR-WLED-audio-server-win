@@ -4,12 +4,19 @@
     {
         private SampleData _sample;
         private double _squelch;
-        private Action _onSilence;
+        private Func<bool> _onSilence;
 
-        public CheckSampleSilence(double squelch, Action onSilence)
+
+        public CheckSampleSilence(double squelch, Func<bool> onSilence)
         {
             _squelch = squelch;
             _onSilence = onSilence;
+        }
+
+        public CheckSampleSilence(double squelch, Action onSilence, bool stopOnSilence = true)
+        {
+            _squelch = squelch;
+            _onSilence = () => { onSilence(); return !stopOnSilence; };
         }
 
         public override void Init(AudioProcessChain chain)
@@ -20,8 +27,7 @@
         public override bool Process()
         {
             if (_sample.MaxSampleAbsValue >= _squelch) return true;
-            _onSilence.Invoke();
-            return false;
+            return _onSilence.Invoke();
         }
     }
 

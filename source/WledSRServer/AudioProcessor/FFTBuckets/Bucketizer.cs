@@ -6,35 +6,48 @@ namespace WledSRServer.AudioProcessor.FFTBuckets
     internal class Bucketizer : Processor
     {
         private readonly int _bucketCount;
-        private readonly Scale _valueScale;
+        private readonly Func<double, double> _valueScaler;
         private readonly double[] _freqPoints;
         private FFTData _fft;
         private FFTBucketData _buckets;
 
-        public enum Scale { Linear, Log, Exponential }
-
-        public Bucketizer(int bucketCount, Scale freqScale, int freqMin, int freqMax, Scale valueScale)
+        public enum Scale
         {
-            _bucketCount = bucketCount;
-            _valueScale = valueScale;
-            _freqPoints = GetFreqBands(freqMin, freqMax, freqScale, bucketCount);
+            Linear,
+            Logarithmic,
+            SquareRoot
         }
 
-        private static double[] GetFreqBands(int freqMin, int freqMax, Scale scale, int count)
+        public static Scale ScaleFromString(string setting, Scale def)
+            => Enum.TryParse<Scale>(setting, true, out var scale) ? scale : def;
+
+        public Bucketizer(int bucketCount, int freqMin, int freqMax, bool logFreqScale, Scale valueScale)
+        {
+            _bucketCount = bucketCount;
+            _valueScaler = GetValueScaler(valueScale);
+            _freqPoints = GetFreqBands(freqMin, freqMax, logFreqScale, bucketCount);
+        }
+
+        private static double[] GetFreqBands(int freqMin, int freqMax, bool logFreqScale, int count)
+        {
+            if (logFreqScale)
+                return Enumerable.Range(0, count + 1).Select(i => freqMin * Math.Pow(freqMax / freqMin, (double)i / count)).ToArray();
+            else
+                return Enumerable.Range(0, count + 1).Select(i => freqMin + (freqMax - freqMin) / (double)count * i).ToArray();
+        }
+
+        private static Func<double, double> GetValueScaler(Scale scale)
         {
             switch (scale)
             {
                 case Scale.Linear:
-                    break;
-
-                case Scale.Log:
-                    return Enumerable.Range(0, count + 1).Select(i => freqMin * Math.Pow(freqMax / freqMin, (double)i / count)).ToArray();
-
-                case Scale.Exponential:
-                    break;
+                    return (val) => val;
+                case Scale.Logarithmic:
+                    return (val) => val == 0 ? 0 : Math.Log(Math.Abs(val));
+                case Scale.SquareRoot:
+                    return (val) => Math.Sqrt(Math.Abs(val));
             }
-
-            throw new ArgumentException("Invalid scale");
+            throw new Exception("Invalid scaling");
         }
 
         public override void Init(AudioProcessChain chain)
@@ -63,7 +76,7 @@ namespace WledSRServer.AudioProcessor.FFTBuckets
                 {
                     var minIndex = freqIndexes.First();
                     var maxIndex = freqIndexes.Last();
-                    var bucketItems = _fft.Values.Skip(minIndex).Take(maxIndex - minIndex + 1).ToArray();
+                    var bucketItems = _fft.Values.Skip(minIndex).Take(maxIndex - minIndex + 1).Select(_valueScaler).ToArray();
                     _buckets.Values[bucket].Value = bucketItems.Max();
                     //buckets[bucket] = bucketItems.Average();
                     bucketCount = bucketItems.Length;

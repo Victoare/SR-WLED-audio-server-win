@@ -92,25 +92,22 @@ namespace WledSRServer
             audioDeviceEventWatcher.Dispose();
         }
 
-        private static bool SetupCaptureDevice()
+        private static WasapiCapture? SetupCaptureDevice()
         {
             try
             {
                 var deviceId = Properties.Settings.Default.AudioCaptureDeviceId;
                 if (string.IsNullOrEmpty(deviceId))
-                    _capture = new WasapiLoopbackCapture();
+                    return new WasapiLoopbackCapture();
                 else
-                    _capture = new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId));
+                    return new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId));
             }
             catch (Exception ex)
             {
                 Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Error;
                 Program.ServerContext.AudioCaptureErrorMessage = ex.Message;
-                _capture?.Dispose();
-                _capture = null;
-                return false;
             }
-            return true;
+            return null;
         }
 
         private static bool StartCapture()
@@ -119,7 +116,8 @@ namespace WledSRServer
 
             StopCapture();
 
-            if (!SetupCaptureDevice())
+            _capture = SetupCaptureDevice();
+            if (_capture == null)
                 return false;
 
             _captureStopped.Reset();
@@ -136,49 +134,13 @@ namespace WledSRServer
 
             try
             {
-                Action onSilence = () =>
-                {
-                    Program.ServerContext.Packet.SetToZero();
-                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Silence;
-                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
-                    PacketUpdated?.Invoke();
-                };
-
-                var chain = new AudioProcessChain();
-                //chain.AddProcessor(new RawLogger("Begin"));
-                chain.AddProcessor(new CheckRawSilence(onSilence));
-                //chain.AddProcessor(new RawAccumulator(50000));
-                //chain.AddProcessor(new RawLogger("After acc"));
-                chain.AddProcessor(new SampleConverter(_capture.WaveFormat));
-                chain.AddProcessor(new CheckSampleSilence(0.00001, onSilence));
-                chain.AddProcessor(new External(() =>
-                {
-                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
-                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
-                }));
-                chain.AddProcessor(new FFTransform(new FftSharp.Windows.FlatTop(), _capture.WaveFormat.SampleRate));
-                chain.AddProcessor(new Bucketizer(16, Bucketizer.Scale.Log,
-                                                      Properties.Settings.Default.FFTLow,
-                                                      Properties.Settings.Default.FFTHigh,
-                                                      Bucketizer.Scale.Linear
-                                                  ));
-                chain.AddProcessor(new External<FFTBucketData>((bucketData) =>
-                {
-                    FFTfreqBands = bucketData.Values.Select(b => $"{b.FreqLow:F0}Hz - {b.FreqHigh:F0}Hz{(b.DataCount == 0 ? " [NO DATA]" : "")}").ToArray();
-                }));
-                // chain.AddProcessor(new BucketAverager(8));
-                chain.AddProcessor(new SetPacket(Program.ServerContext.Packet));
-                chain.AddProcessor(new External(() =>
-                {
-                    PacketUpdated?.Invoke();
-                }));
-
+                var chain = SetupChain();
                 _capture.DataAvailable += (s, e) => chain.Process(e.Buffer, e.BytesRecorded);
             }
             catch (Exception ex)
             {
                 Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Error;
-                Program.ServerContext.AudioCaptureErrorMessage = $"AUDIO: {ex.Message}";
+                Program.ServerContext.AudioCaptureErrorMessage = ex.Message;
                 return false;
             }
 
@@ -223,6 +185,56 @@ namespace WledSRServer
 
             _capture?.Dispose();
             _capture = null;
+        }
+
+        private static AudioProcessChain SetupChain()
+        {
+            var settings = Properties.Settings.Default;
+
+            var onSilence = () =>
+            {
+                //Program.ServerContext.Packet.SetToZero();
+                Program.ServerContext.Packet.DecayValues(0.85f);
+                Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Silence;
+                Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
+                PacketUpdated?.Invoke();
+            };
+
+            var chain = new AudioProcessChain();
+            //chain.AddProcessor(new RawLogger("Begin"));
+            chain.AddProcessor(new CheckRawSilence(onSilence));
+            //chain.AddProcessor(new RawAccumulator(50000));
+            //chain.AddProcessor(new RawLogger("After acc"));
+            chain.AddProcessor(new SampleConverter(_capture.WaveFormat));
+            chain.AddProcessor(new CheckSampleSilence(0.0001, onSilence));
+            chain.AddProcessor(new External(() =>
+            {
+                Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
+                Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
+            }));
+            chain.AddProcessor(new FFTransform(
+                                        new FftSharp.Windows.FlatTop(),
+                                        _capture.WaveFormat.SampleRate
+                                   ));
+            chain.AddProcessor(new Bucketizer(
+                                        16,
+                                        settings.FFTLow,
+                                        settings.FFTHigh,
+                                        settings.FFTFreqLogScale,
+                                        Bucketizer.ScaleFromString(settings.FFTValueScale, Bucketizer.Scale.SquareRoot)
+                                    ));
+            chain.AddProcessor(new External<FFTBucketData>((bucketData) =>
+            {
+                FFTfreqBands = bucketData.Values.Select(b => $"{b.FreqLow:F0}Hz - {b.FreqHigh:F0}Hz{(b.DataCount == 0 ? " [NO DATA]" : "")}").ToArray();
+            }));
+            //chain.AddProcessor(new BucketAverager(10));
+            chain.AddProcessor(new SetPacket(Program.ServerContext.Packet));
+            chain.AddProcessor(new External(() =>
+            {
+                PacketUpdated?.Invoke();
+            }));
+
+            return chain;
         }
     }
 }

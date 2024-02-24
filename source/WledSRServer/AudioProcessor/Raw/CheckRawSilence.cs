@@ -3,11 +3,16 @@
     internal class CheckRawSilence : Processor
     {
         private RawData _raw;
-        private Action _onSilence;
+        private Func<bool> _onSilence;
 
-        public CheckRawSilence(Action onSilence)
+        public CheckRawSilence(Func<bool> onSilence)
         {
             _onSilence = onSilence;
+        }
+
+        public CheckRawSilence(Action onSilence, bool stopOnSilence = true)
+        {
+            _onSilence = () => { onSilence(); return !stopOnSilence; };
         }
 
         public override void Init(AudioProcessChain chain)
@@ -18,8 +23,7 @@
         public override bool Process()
         {
             if (_raw.Length > 0) return true; // maybe check for all zero byte in _raw.Bytes?
-            _onSilence.Invoke();
-            return false;
+            return _onSilence.Invoke();
         }
     }
 

@@ -73,7 +73,7 @@ namespace WledSRServer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("20")]
+        [global::System.Configuration.DefaultSettingValueAttribute("50")]
         public int FFTLow {
             get {
                 return ((int)(this["FFTLow"]));
@@ -85,7 +85,7 @@ namespace WledSRServer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("20000")]
+        [global::System.Configuration.DefaultSettingValueAttribute("5000")]
         public int FFTHigh {
             get {
                 return ((int)(this["FFTHigh"]));
@@ -104,6 +104,30 @@ namespace WledSRServer.Properties {
             }
             set {
                 this["UpdateSettings"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("SquareRoot")]
+        public string FFTValueScale {
+            get {
+                return ((string)(this["FFTValueScale"]));
+            }
+            set {
+                this["FFTValueScale"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool FFTFreqLogScale {
+            get {
+                return ((bool)(this["FFTFreqLogScale"]));
+            }
+            set {
+                this["FFTFreqLogScale"] = value;
             }
         }
     }

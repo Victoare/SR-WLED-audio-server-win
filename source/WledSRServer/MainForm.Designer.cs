@@ -36,6 +36,7 @@ namespace WledSRServer
             btnSettings = new Button();
             lblPPS = new Label();
             tableLayoutPanel1 = new TableLayoutPanel();
+            chbFFTLogFreq = new CheckBox();
             label6 = new Label();
             txtFFTUpper = new TextBox();
             label5 = new Label();
@@ -53,13 +54,21 @@ namespace WledSRServer
             lblCapturing = new Label();
             label3 = new Label();
             toolTip1 = new ToolTip(components);
-            grpSettings = new GroupBox();
+            groupBox3 = new GroupBox();
+            label8 = new Label();
+            ddlValueScale = new ComboBox();
+            groupbox4 = new GroupBox();
             label7 = new Label();
             tmrUpdateStats = new System.Windows.Forms.Timer(components);
+            pnlSettings = new Panel();
+            groupBox1 = new GroupBox();
             grpBottomPanel.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             groupBox2.SuspendLayout();
-            grpSettings.SuspendLayout();
+            groupBox3.SuspendLayout();
+            groupbox4.SuspendLayout();
+            pnlSettings.SuspendLayout();
+            groupBox1.SuspendLayout();
             SuspendLayout();
             // 
             // btnExitApplication
@@ -107,31 +116,45 @@ namespace WledSRServer
             // 
             // tableLayoutPanel1
             // 
-            tableLayoutPanel1.ColumnCount = 5;
+            tableLayoutPanel1.ColumnCount = 6;
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.Controls.Add(chbFFTLogFreq, 5, 0);
             tableLayoutPanel1.Controls.Add(label6, 4, 0);
             tableLayoutPanel1.Controls.Add(txtFFTUpper, 3, 0);
             tableLayoutPanel1.Controls.Add(label5, 2, 0);
             tableLayoutPanel1.Controls.Add(label4, 0, 0);
             tableLayoutPanel1.Controls.Add(txtFFTLower, 1, 0);
-            tableLayoutPanel1.Location = new Point(219, 13);
+            tableLayoutPanel1.Location = new Point(5, 15);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 1;
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableLayoutPanel1.Size = new Size(204, 29);
+            tableLayoutPanel1.Size = new Size(320, 29);
             tableLayoutPanel1.TabIndex = 16;
+            // 
+            // chbFFTLogFreq
+            // 
+            chbFFTLogFreq.AutoSize = true;
+            chbFFTLogFreq.Dock = DockStyle.Fill;
+            chbFFTLogFreq.Location = new Point(243, 3);
+            chbFFTLogFreq.Name = "chbFFTLogFreq";
+            chbFFTLogFreq.Size = new Size(74, 23);
+            chbFFTLogFreq.TabIndex = 19;
+            chbFFTLogFreq.Text = "LogScale";
+            toolTip1.SetToolTip(chbFFTLogFreq, "Frequency distribution on logarithmic scale (instead of linear)");
+            chbFFTLogFreq.UseVisualStyleBackColor = true;
             // 
             // label6
             // 
             label6.AutoSize = true;
             label6.Dock = DockStyle.Fill;
-            label6.Location = new Point(179, 0);
+            label6.Location = new Point(216, 0);
             label6.Name = "label6";
-            label6.Size = new Size(22, 29);
+            label6.Size = new Size(21, 29);
             label6.TabIndex = 16;
             label6.Text = "Hz";
             label6.TextAlign = ContentAlignment.MiddleCenter;
@@ -139,7 +162,7 @@ namespace WledSRServer
             // txtFFTUpper
             // 
             txtFFTUpper.Dock = DockStyle.Fill;
-            txtFFTUpper.Location = new Point(132, 3);
+            txtFFTUpper.Location = new Point(169, 3);
             txtFFTUpper.MaxLength = 5;
             txtFFTUpper.Name = "txtFFTUpper";
             txtFFTUpper.Size = new Size(41, 23);
@@ -151,7 +174,7 @@ namespace WledSRServer
             // 
             label5.AutoSize = true;
             label5.Dock = DockStyle.Fill;
-            label5.Location = new Point(114, 0);
+            label5.Location = new Point(151, 0);
             label5.Name = "label5";
             label5.Size = new Size(12, 29);
             label5.TabIndex = 15;
@@ -164,16 +187,16 @@ namespace WledSRServer
             label4.Dock = DockStyle.Fill;
             label4.Location = new Point(3, 0);
             label4.Name = "label4";
-            label4.Size = new Size(58, 29);
+            label4.Size = new Size(95, 29);
             label4.TabIndex = 0;
-            label4.Text = "FFT range";
+            label4.Text = "Frequency range";
             label4.TextAlign = ContentAlignment.MiddleCenter;
             toolTip1.SetToolTip(label4, "Low and high end of the analyzed FFT spectrum");
             // 
             // txtFFTLower
             // 
             txtFFTLower.Dock = DockStyle.Fill;
-            txtFFTLower.Location = new Point(67, 3);
+            txtFFTLower.Location = new Point(104, 3);
             txtFFTLower.MaxLength = 5;
             txtFFTLower.Name = "txtFFTLower";
             txtFFTLower.Size = new Size(41, 23);
@@ -183,7 +206,7 @@ namespace WledSRServer
             // 
             // txtLocalIpAddress
             // 
-            txtLocalIpAddress.Location = new Point(541, 19);
+            txtLocalIpAddress.Location = new Point(55, 20);
             txtLocalIpAddress.MaxLength = 15;
             txtLocalIpAddress.Name = "txtLocalIpAddress";
             txtLocalIpAddress.Size = new Size(91, 23);
@@ -205,7 +228,7 @@ namespace WledSRServer
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(495, 52);
+            label2.Location = new Point(9, 53);
             label2.Name = "label2";
             label2.Size = new Size(45, 15);
             label2.TabIndex = 10;
@@ -226,7 +249,7 @@ namespace WledSRServer
             // 
             // txtUdpPort
             // 
-            txtUdpPort.Location = new Point(541, 49);
+            txtUdpPort.Location = new Point(55, 50);
             txtUdpPort.MaxLength = 5;
             txtUdpPort.Name = "txtUdpPort";
             txtUdpPort.Size = new Size(40, 23);
@@ -236,7 +259,7 @@ namespace WledSRServer
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(494, 23);
+            label1.Location = new Point(8, 24);
             label1.Name = "label1";
             label1.Size = new Size(48, 15);
             label1.TabIndex = 10;
@@ -293,23 +316,45 @@ namespace WledSRServer
             label3.TabIndex = 12;
             label3.Text = "Input device";
             // 
-            // grpSettings
+            // groupBox3
             // 
-            grpSettings.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            grpSettings.Controls.Add(tableLayoutPanel1);
-            grpSettings.Controls.Add(btnSetStartupGUI);
-            grpSettings.Controls.Add(txtLocalIpAddress);
-            grpSettings.Controls.Add(btnSetAutoRun);
-            grpSettings.Controls.Add(label2);
-            grpSettings.Controls.Add(label1);
-            grpSettings.Controls.Add(txtUdpPort);
-            grpSettings.Controls.Add(label7);
-            grpSettings.Location = new Point(4, 239);
-            grpSettings.Name = "grpSettings";
-            grpSettings.Size = new Size(643, 79);
-            grpSettings.TabIndex = 0;
-            grpSettings.TabStop = false;
-            grpSettings.Visible = false;
+            groupBox3.Controls.Add(label8);
+            groupBox3.Controls.Add(ddlValueScale);
+            groupBox3.Controls.Add(tableLayoutPanel1);
+            groupBox3.Location = new Point(154, -8);
+            groupBox3.Name = "groupBox3";
+            groupBox3.Size = new Size(335, 81);
+            groupBox3.TabIndex = 2;
+            groupBox3.TabStop = false;
+            // 
+            // label8
+            // 
+            label8.AutoSize = true;
+            label8.Location = new Point(29, 52);
+            label8.Name = "label8";
+            label8.Size = new Size(75, 15);
+            label8.TabIndex = 19;
+            label8.Text = "Value scaling";
+            // 
+            // ddlValueScale
+            // 
+            ddlValueScale.DropDownStyle = ComboBoxStyle.DropDownList;
+            ddlValueScale.FormattingEnabled = true;
+            ddlValueScale.Location = new Point(109, 50);
+            ddlValueScale.Name = "ddlValueScale";
+            ddlValueScale.Size = new Size(208, 23);
+            ddlValueScale.TabIndex = 18;
+            // 
+            // groupbox4
+            // 
+            groupbox4.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            groupbox4.Controls.Add(btnSetStartupGUI);
+            groupbox4.Controls.Add(btnSetAutoRun);
+            groupbox4.Location = new Point(0, -7);
+            groupbox4.Name = "groupbox4";
+            groupbox4.Size = new Size(151, 80);
+            groupbox4.TabIndex = 0;
+            groupbox4.TabStop = false;
             // 
             // label7
             // 
@@ -317,7 +362,7 @@ namespace WledSRServer
             label7.AutoSize = true;
             label7.Font = new Font("Segoe UI", 8.25F, FontStyle.Regular, GraphicsUnit.Point, 238);
             label7.ForeColor = SystemColors.ControlDark;
-            label7.Location = new Point(593, 64);
+            label7.Location = new Point(101, 66);
             label7.Name = "label7";
             label7.Size = new Size(49, 13);
             label7.TabIndex = 17;
@@ -328,6 +373,30 @@ namespace WledSRServer
             // 
             tmrUpdateStats.Tick += tmrUpdateStats_Tick;
             // 
+            // pnlSettings
+            // 
+            pnlSettings.Controls.Add(groupBox1);
+            pnlSettings.Controls.Add(groupbox4);
+            pnlSettings.Controls.Add(groupBox3);
+            pnlSettings.Location = new Point(4, 248);
+            pnlSettings.Name = "pnlSettings";
+            pnlSettings.Size = new Size(643, 76);
+            pnlSettings.TabIndex = 8;
+            pnlSettings.Visible = false;
+            // 
+            // groupBox1
+            // 
+            groupBox1.Controls.Add(txtLocalIpAddress);
+            groupBox1.Controls.Add(label7);
+            groupBox1.Controls.Add(txtUdpPort);
+            groupBox1.Controls.Add(label2);
+            groupBox1.Controls.Add(label1);
+            groupBox1.Location = new Point(492, -8);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(151, 81);
+            groupBox1.TabIndex = 1;
+            groupBox1.TabStop = false;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -335,10 +404,10 @@ namespace WledSRServer
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             ClientSize = new Size(651, 324);
+            Controls.Add(pnlSettings);
             Controls.Add(groupBox2);
             Controls.Add(fftDisplay2);
             Controls.Add(grpBottomPanel);
-            Controls.Add(grpSettings);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             Name = "MainForm";
@@ -350,8 +419,12 @@ namespace WledSRServer
             tableLayoutPanel1.PerformLayout();
             groupBox2.ResumeLayout(false);
             groupBox2.PerformLayout();
-            grpSettings.ResumeLayout(false);
-            grpSettings.PerformLayout();
+            groupBox3.ResumeLayout(false);
+            groupBox3.PerformLayout();
+            groupbox4.ResumeLayout(false);
+            pnlSettings.ResumeLayout(false);
+            groupBox1.ResumeLayout(false);
+            groupBox1.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -379,8 +452,14 @@ namespace WledSRServer
         private TextBox txtFFTUpper;
         private Label label5;
         private Button btnSettings;
-        private GroupBox grpSettings;
+        private GroupBox groupbox4;
         private Label label7;
         private System.Windows.Forms.Timer tmrUpdateStats;
+        private ComboBox ddlValueScale;
+        private CheckBox chbFFTLogFreq;
+        private Panel pnlSettings;
+        private GroupBox groupBox3;
+        private GroupBox groupBox1;
+        private Label label8;
     }
 }
