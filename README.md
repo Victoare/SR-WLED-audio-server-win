@@ -23,28 +23,45 @@ By default, the main form will open when the app starts.
 
 <div align="center" >
 
-![Main form](assets/Screenshots/Screenshot_3.png)
+![Main form](assets/Screenshots/Screenshot_5.png)
 
 </div>
 
 This is the main form where you can check if the capture is working, set some config values, or terminate the app.
 
+### Input
+
 In the top part you can select the **input device**. "Loopback" is for the general system sound. In the list you will find all the inputs your system has (like microphone, line input, webcam's mic, or other devices).
 You can see the state of the capture by checking the "**Capturing**" box next to the input device selector. Its background can be gray (for a split second when the system is starting, or new input device is selected), red (if any related error occours), yellow (if the capturing is working but only silence is detected) or green (if it senses sound).
 
+### FFT
+
 Below that there is the FFT bars. This is a visual representation of the information sent to WLEDs. They should move to the frequencies of the music. (The way it divides the sound to this bars is configurable below) 
+Also there is a **Beat** box what is should pulse to the beat. For now this is a very simple beat detection, don't count on it too much.
+
+### Settings
 
 If you are one of the lucky few who waited for this exact moment with well-prepared WLEDs, non-problematic network setup and music bangin' from your PC, then it will probably work out of the box. 
 But otherwise, fear not, because the **Settings** button will open the bottom part (it is hidden by default).
 
+### Startup
+
 For most convenient usage you can set **Start with windows** and the app will start automatically after login. Mind you, to set this, the app may require elevated permissions (it will ask if needed).
 Also, you can check **Start without GUI** and the app will only appear in the system tray at start.
 
-**FFT range** will set the frequency range for the bars. By default, it is 20-20000hz, but you can widen or tighten the range. But be aware that if the range is too tight, let's say 10-50hz to show only the super low frequencies, there is a possibility of having empty bars. This is not a bug nor a feature, just a side effect.
+### Fast Fourier
+
+There is a setting for the **Frequency range** for the bars. By default, it is 50-7000hz to somewhat match the internal workings in WLED, but you can widen or tighten the range. Be aware that if the range is too tight, let's say 10-50hz to show only the super low frequencies, there is a possibility of having empty bars. This is not a bug nor a feature, just a side effect.
+The scale can be divided linearly or on a Logarithmic scale. The latter should work as our ears. If unchecked then the frequency range will be divided into 16 equal ranges.
+With **Value scaling** the bars "spikiness" can be emphasized or reduced. This settings works similar as the setting in WLED.
+
+### Network
 
 **SR Port** is the same port you have to set up in your WLED configuration page. By default, this is 11988.
 
 If the bars are jumping, the *Packet per second* shows a nonzero value, WLED is properly configured but still not reacting to your audio then try to set the **Local IP** to the IP your machine has in the network. If you start to type, it will autosuggest IPs it found on the network adapters and will show an error if the address is invalid, unusable, or malformed.
+
+### The rest
 
 If the app was started with the main form open, then when you close the form with the "X" you will receive a notification telling you that the app will be running in the background.
 
