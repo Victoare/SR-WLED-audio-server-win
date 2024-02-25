@@ -29,6 +29,7 @@ namespace WledSRServer
         #endregion
 
         public static string[]? FFTfreqBands;
+        public static AudioProcessChain? ActiveChain;
 
         public delegate void PacketUpdatedHandler();
         public static event PacketUpdatedHandler? PacketUpdated;
@@ -135,6 +136,7 @@ namespace WledSRServer
             try
             {
                 var chain = SetupChain();
+                ActiveChain = chain;
                 _capture.DataAvailable += (s, e) => chain.Process(e.Buffer, e.BytesRecorded);
             }
             catch (Exception ex)
@@ -216,6 +218,7 @@ namespace WledSRServer
                                         new FftSharp.Windows.FlatTop(),
                                         _capture.WaveFormat.SampleRate
                                    ));
+            chain.AddProcessor(new BeatDetector(100, 500));
             chain.AddProcessor(new Bucketizer(
                                         16,
                                         settings.FFTLow,
@@ -231,6 +234,7 @@ namespace WledSRServer
             chain.AddProcessor(new SetPacket(Program.ServerContext.Packet));
             chain.AddProcessor(new External(() =>
             {
+                // Debug.WriteLine($"UpdateWatchers : {PacketUpdated?.GetInvocationList().Length}"); // check for proper unregistration
                 PacketUpdated?.Invoke();
             }));
 

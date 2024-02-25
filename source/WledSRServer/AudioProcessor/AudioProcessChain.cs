@@ -45,6 +45,11 @@ namespace WledSRServer.AudioProcessor
             return context;
         }
 
+        public TProcessor? GetProcessor<TProcessor>() where TProcessor : Processor
+        {
+            return _processors.Where(p => p.GetType() == typeof(TProcessor)).FirstOrDefault() as TProcessor;
+        }
+
         public void Process(byte[] rawBytes, int length)
         {
             _raw.EnsureSize(length);

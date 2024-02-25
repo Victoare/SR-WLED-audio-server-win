@@ -67,19 +67,13 @@ namespace WledSRServer.AudioProcessor.FFTBuckets
         {
             for (var bucket = 0; bucket < _bucketCount; bucket++)
             {
-                var freqIndexes = _fft.Frequencies.Select((freq, idx) => new { freq, idx })
-                                                  .Where(itm => itm.freq >= _freqPoints[bucket] && itm.freq <= _freqPoints[bucket + 1])
-                                                  .Select(itm => itm.idx)
-                                                  .ToArray();
+                var values = _fft.GetValuesByFreq(_freqPoints[bucket], _freqPoints[bucket + 1]);
                 var bucketCount = 0;
-                if (freqIndexes.Any())
+                if (values.Any())
                 {
-                    var minIndex = freqIndexes.First();
-                    var maxIndex = freqIndexes.Last();
-                    var bucketItems = _fft.Values.Skip(minIndex).Take(maxIndex - minIndex + 1).Select(_valueScaler).ToArray();
-                    _buckets.Values[bucket].Value = bucketItems.Max();
-                    //buckets[bucket] = bucketItems.Average();
-                    bucketCount = bucketItems.Length;
+                    _buckets.Values[bucket].Value = values.Select(_valueScaler).Max();
+                    //_buckets.Values[bucket].Value = values.Select(_valueScaler).Average();
+                    bucketCount = values.Length;
                 }
                 else
                 {

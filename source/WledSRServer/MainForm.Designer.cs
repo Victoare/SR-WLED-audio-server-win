@@ -33,6 +33,8 @@ namespace WledSRServer
             components = new System.ComponentModel.Container();
             btnExitApplication = new Button();
             grpBottomPanel = new GroupBox();
+            label9 = new Label();
+            beatPixel1 = new BeatPixel();
             btnSettings = new Button();
             lblPPS = new Label();
             tableLayoutPanel1 = new TableLayoutPanel();
@@ -85,6 +87,8 @@ namespace WledSRServer
             // grpBottomPanel
             // 
             grpBottomPanel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            grpBottomPanel.Controls.Add(label9);
+            grpBottomPanel.Controls.Add(beatPixel1);
             grpBottomPanel.Controls.Add(btnSettings);
             grpBottomPanel.Controls.Add(lblPPS);
             grpBottomPanel.Controls.Add(btnExitApplication);
@@ -93,6 +97,23 @@ namespace WledSRServer
             grpBottomPanel.Size = new Size(643, 42);
             grpBottomPanel.TabIndex = 5;
             grpBottomPanel.TabStop = false;
+            // 
+            // label9
+            // 
+            label9.AutoSize = true;
+            label9.BackColor = Color.Transparent;
+            label9.Location = new Point(155, 17);
+            label9.Name = "label9";
+            label9.Size = new Size(30, 15);
+            label9.TabIndex = 6;
+            label9.Text = "Beat";
+            // 
+            // beatPixel1
+            // 
+            beatPixel1.Location = new Point(186, 15);
+            beatPixel1.Name = "beatPixel1";
+            beatPixel1.Size = new Size(18, 19);
+            beatPixel1.TabIndex = 5;
             // 
             // btnSettings
             // 
@@ -408,6 +429,7 @@ namespace WledSRServer
             Controls.Add(groupBox2);
             Controls.Add(fftDisplay2);
             Controls.Add(grpBottomPanel);
+            DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             Name = "MainForm";
@@ -461,5 +483,7 @@ namespace WledSRServer
         private GroupBox groupBox3;
         private GroupBox groupBox1;
         private Label label8;
+        private BeatPixel beatPixel1;
+        private Label label9;
     }
 }

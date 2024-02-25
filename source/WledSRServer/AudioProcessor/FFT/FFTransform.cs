@@ -2,6 +2,24 @@
 
 namespace WledSRServer.AudioProcessor.FFT
 {
+    internal class FFTData : Context
+    {
+        public double[] Values { get; set; } = Array.Empty<double>();
+        public double[] Frequencies { get; set; } = Array.Empty<double>();
+
+        public double PeakValue { get; set; }
+        public double PeakFrequency { get; set; }
+
+        public int[] GetIndexesByFreq(double freqLow, double freqHigh)
+            => Frequencies.Select((freq, idx) => new { freq, idx })
+                          .Where(f => f.freq >= freqLow && f.freq <= freqHigh)
+                          .Select(f => f.idx)
+                          .ToArray();
+
+        public double[] GetValuesByFreq(double freqLow, double freqHigh)
+            => GetIndexesByFreq(freqLow, freqHigh).Select(idx => Values[idx]).ToArray();
+    }
+
     internal class FFTransform : Processor
     {
         private Sample.SampleData _sample;

@@ -29,23 +29,23 @@ namespace WledSRServer
 
         /// <summary>Either "sampleRaw" or "rawSampleAgc" depending on soundAgc setting</summary>
         [MarshalAs(UnmanagedType.R4)]
-        public float sampleRaw;
+        public float SampleRaw;
 
         /// <summary>Either "sampleAvg" or "sampleAgc" depending on soundAgc setting</summary>
         [MarshalAs(UnmanagedType.R4)]
-        public float sampleSmth;
+        public float SampleSmth;
 
         /// <summary>0 no peak; >=1 peak detected. In future, this will also provide peak Magnitude</summary>
         [MarshalAs(UnmanagedType.U1)]
-        public byte samplePeak;
+        public byte SamplePeak;
 
         /// <summary>reserved for future extensions like loudness</summary>
         [MarshalAs(UnmanagedType.U1)]
-        public byte reserved1;
+        private byte reserved1;
 
         /// <summary>FFT results, one byte per GEQ channel</summary>
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-        public byte[] fftResult = new byte[16];
+        public byte[] FFT_Bins = new byte[16];
 
         /// <summary>Padding?</summary>
         [MarshalAs(UnmanagedType.U1)]
@@ -67,21 +67,21 @@ namespace WledSRServer
     {
         public static void SetToZero(this AudioSyncPacket_v2 data)
         {
-            data.sampleRaw = 0;
-            data.sampleSmth = 0;
-            data.samplePeak = 0;
-            data.fftResult = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            data.SampleRaw = 0;
+            data.SampleSmth = 0;
+            data.SamplePeak = 0;
+            data.FFT_Bins = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
             data.FFT_Magnitude = 0;
             data.FFT_MajorPeak = 0;
         }
 
         public static void DecayValues(this AudioSyncPacket_v2 data, float decayRate)
         {
-            data.sampleRaw *= decayRate;
-            data.sampleSmth *= decayRate;
+            data.SampleRaw *= decayRate;
+            data.SampleSmth *= decayRate;
             //data.samplePeak = ... ;
-            for (var i = 0; i < data.fftResult.Length; i++)
-                data.fftResult[i] = (byte)Math.Floor(data.fftResult[i] * decayRate);
+            for (var i = 0; i < data.FFT_Bins.Length; i++)
+                data.FFT_Bins[i] = (byte)Math.Floor(data.FFT_Bins[i] * decayRate);
             data.FFT_Magnitude *= decayRate;
             //data.FFT_MajorPeak = 0;
         }

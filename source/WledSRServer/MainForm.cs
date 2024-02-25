@@ -74,6 +74,8 @@ namespace WledSRServer
             Program.ServerContext.PacketCounter = 0;
             PPSwatch.Start();
             tmrUpdateStats.Enabled = true;
+
+            beatPixel1.DoubleClick += (s, e) => new BeatTestForm().Show();
         }
 
         #region Periodic stats update

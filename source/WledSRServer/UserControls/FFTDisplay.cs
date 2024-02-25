@@ -18,19 +18,14 @@
         {
             var cancelUpdate = new CancellationTokenSource();
 
-            AudioCaptureManager.PacketUpdated += PacketUpdated;
+            var packetUpdated = new AudioCaptureManager.PacketUpdatedHandler(Invalidate);
+            AudioCaptureManager.PacketUpdated += packetUpdated;
 
             Disposed += (s, e) =>
             {
-                AudioCaptureManager.PacketUpdated -= PacketUpdated;
+                AudioCaptureManager.PacketUpdated -= packetUpdated;
                 cancelUpdate.Cancel();
             };
-        }
-
-        // needed to be able to properly unregister from the event!
-        private void PacketUpdated()
-        {
-            Invalidate();
         }
 
         private void FFTDisplay_MouseMove(object? sender, MouseEventArgs e)
@@ -49,7 +44,7 @@
 
         private void RecalculateRectangles()
         {
-            var barCount = Program.ServerContext.Packet.fftResult.Length;
+            var barCount = Program.ServerContext.Packet.FFT_Bins.Length;
             _rectanglesFull = new RectangleF[barCount];
             _rectanglesBar = new RectangleF[barCount];
             var width = (float)(this.Width - 1 + PADDING) / barCount - PADDING;
@@ -71,7 +66,7 @@
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            var fftBytes = Program.ServerContext.Packet.fftResult;
+            var fftBytes = Program.ServerContext.Packet.FFT_Bins;
 
             if (DesignMode)
                 new Random().NextBytes(fftBytes);
