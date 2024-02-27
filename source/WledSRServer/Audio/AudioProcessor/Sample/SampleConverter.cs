@@ -1,7 +1,8 @@
 ﻿using NAudio.Wave;
-using WledSRServer.AudioProcessor.Raw;
+using WledSRServer.Audio.AudioProcessor;
+using WledSRServer.Audio.AudioProcessor.Raw;
 
-namespace WledSRServer.AudioProcessor.Sample
+namespace WledSRServer.Audio.AudioProcessor.Sample
 {
     internal class SampleConverter : Processor
     {

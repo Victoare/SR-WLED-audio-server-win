@@ -1,6 +1,6 @@
-﻿using WledSRServer.AudioProcessor.Raw;
+﻿using WledSRServer.Audio.AudioProcessor.Raw;
 
-namespace WledSRServer.AudioProcessor
+namespace WledSRServer.Audio.AudioProcessor
 {
     internal class Context
     {

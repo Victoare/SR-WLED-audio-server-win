@@ -1,5 +1,6 @@
 ﻿using System.Data;
-using WledSRServer.AudioProcessor.FFT;
+using WledSRServer.Audio;
+using WledSRServer.Audio.AudioProcessor.FFT;
 
 namespace WledSRServer.UserControls
 {

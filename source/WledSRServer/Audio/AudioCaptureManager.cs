@@ -2,14 +2,14 @@
 using NAudio.Wave;
 using System.Data;
 using System.Diagnostics;
-using WledSRServer.AudioProcessor;
-using WledSRServer.AudioProcessor.FFT;
-using WledSRServer.AudioProcessor.FFTBuckets;
-using WledSRServer.AudioProcessor.Packet;
-using WledSRServer.AudioProcessor.Raw;
-using WledSRServer.AudioProcessor.Sample;
+using WledSRServer.Audio.AudioProcessor;
+using WledSRServer.Audio.AudioProcessor.FFT;
+using WledSRServer.Audio.AudioProcessor.FFTBuckets;
+using WledSRServer.Audio.AudioProcessor.Packet;
+using WledSRServer.Audio.AudioProcessor.Raw;
+using WledSRServer.Audio.AudioProcessor.Sample;
 
-namespace WledSRServer
+namespace WledSRServer.Audio
 {
     internal static class AudioCaptureManager
     {
@@ -98,10 +98,11 @@ namespace WledSRServer
             try
             {
                 var deviceId = Properties.Settings.Default.AudioCaptureDeviceId;
+                var audioBufferMs = 50; // min. seems to be 50
                 if (string.IsNullOrEmpty(deviceId))
                     return new WasapiLoopbackCapture();
                 else
-                    return new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId));
+                    return new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId), false, audioBufferMs);
             }
             catch (Exception ex)
             {

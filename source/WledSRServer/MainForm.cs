@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Net;
-using WledSRServer.AudioProcessor.FFTBuckets;
+using WledSRServer.Audio;
+using WledSRServer.Audio.AudioProcessor.FFTBuckets;
 
 namespace WledSRServer
 {

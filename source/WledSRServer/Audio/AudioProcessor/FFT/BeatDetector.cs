@@ -1,4 +1,6 @@
-﻿namespace WledSRServer.AudioProcessor.FFT
+﻿using WledSRServer.Audio.AudioProcessor;
+
+namespace WledSRServer.Audio.AudioProcessor.FFT
 {
     internal class BeatData : Context
     {
@@ -15,7 +17,7 @@
         public double _freqHigh;
         public List<double> _history = new List<double>();
         //public const int _maxHistory = 25; // ~1.5sec (~16 process / sec)
-        public const int _maxHistory = 25;
+        public const int _maxHistory = 50;
         public const double _tresholdMultiplier = 1.20;
 
         public BeatDetector(double freqLow, double freqHigh)

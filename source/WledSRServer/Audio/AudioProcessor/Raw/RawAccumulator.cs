@@ -1,4 +1,6 @@
-﻿namespace WledSRServer.AudioProcessor.Raw
+﻿using WledSRServer.Audio.AudioProcessor;
+
+namespace WledSRServer.Audio.AudioProcessor.Raw
 {
     internal class RawDataAccumulator : RawData
     {

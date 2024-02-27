@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using WledSRServer.Audio;
 using WledSRServer.Properties;
 
 namespace WledSRServer

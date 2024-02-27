@@ -1,7 +1,7 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
 
-namespace WledSRServer
+namespace WledSRServer.Audio
 {
     // https://stackoverflow.com/questions/6163119/handling-changed-audio-device-event-in-c-sharp
 

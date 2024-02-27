@@ -1,7 +1,8 @@
-﻿using WledSRServer.AudioProcessor.FFT;
-using static WledSRServer.AudioProcessor.FFTBuckets.FFTBucketData;
+﻿using WledSRServer.Audio.AudioProcessor;
+using WledSRServer.Audio.AudioProcessor.FFT;
+using static WledSRServer.Audio.AudioProcessor.FFTBuckets.FFTBucketData;
 
-namespace WledSRServer.AudioProcessor.FFTBuckets
+namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
 {
     internal class Bucketizer : Processor
     {

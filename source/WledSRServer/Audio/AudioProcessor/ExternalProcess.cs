@@ -1,4 +1,4 @@
-﻿namespace WledSRServer.AudioProcessor
+﻿namespace WledSRServer.Audio.AudioProcessor
 {
     internal class External : Processor
     {

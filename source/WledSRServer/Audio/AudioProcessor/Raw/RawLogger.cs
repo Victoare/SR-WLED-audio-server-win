@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
+using WledSRServer.Audio.AudioProcessor;
 
-namespace WledSRServer.AudioProcessor.Raw
+namespace WledSRServer.Audio.AudioProcessor.Raw
 {
     internal class RawLogger : Processor
     {

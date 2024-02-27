@@ -1,4 +1,6 @@
-﻿namespace WledSRServer
+﻿using WledSRServer.Audio;
+
+namespace WledSRServer
 {
     public partial class FFTDisplay : UserControl
     {

@@ -1,4 +1,6 @@
-﻿namespace WledSRServer.AudioProcessor.Sample
+﻿using WledSRServer.Audio.AudioProcessor;
+
+namespace WledSRServer.Audio.AudioProcessor.Sample
 {
     internal class SampleData : Context
     {

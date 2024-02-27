@@ -1,6 +1,7 @@
 ﻿using FftSharp;
+using WledSRServer.Audio.AudioProcessor;
 
-namespace WledSRServer.AudioProcessor.FFT
+namespace WledSRServer.Audio.AudioProcessor.FFT
 {
     internal class FFTData : Context
     {

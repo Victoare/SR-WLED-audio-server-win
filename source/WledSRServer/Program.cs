@@ -1,6 +1,7 @@
 ﻿using System.Configuration;
 using System.Reflection;
 using WledSRServer;
+using WledSRServer.Audio;
 using WledSRServer.Properties;
 
 internal class Program

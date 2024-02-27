@@ -1,4 +1,6 @@
-﻿namespace WledSRServer.UserControls
+﻿using WledSRServer.Audio;
+
+namespace WledSRServer.UserControls
 {
     public partial class BeatPixel : UserControl
     {

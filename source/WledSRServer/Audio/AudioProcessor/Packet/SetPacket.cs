@@ -1,8 +1,9 @@
 ﻿using System.Diagnostics;
-using WledSRServer.AudioProcessor.FFT;
-using WledSRServer.AudioProcessor.FFTBuckets;
+using WledSRServer.Audio.AudioProcessor;
+using WledSRServer.Audio.AudioProcessor.FFT;
+using WledSRServer.Audio.AudioProcessor.FFTBuckets;
 
-namespace WledSRServer.AudioProcessor.Packet
+namespace WledSRServer.Audio.AudioProcessor.Packet
 {
     internal class SetPacket : Processor
     {
@@ -33,7 +34,7 @@ namespace WledSRServer.AudioProcessor.Packet
             if (_agcMaxValue < bucketMaxValue)
                 _agcMaxValue = bucketMaxValue;
             else
-                _agcMaxValue = (_agcMaxValue * 0.8 + bucketMaxValue * 0.2);
+                _agcMaxValue = _agcMaxValue * 0.8 + bucketMaxValue * 0.2;
 
             //var bucketSpan = bucketMaxValue - bucketMinValue;
             //var bucketSpan = peakPower - bucketMin;
@@ -48,7 +49,7 @@ namespace WledSRServer.AudioProcessor.Packet
             var raw = (float)(bucketAvgValue / bucketMaxValue * 2048);
             //var raw = (float)((bucketAvgValue-bucketMinValue) / bucketSpan * 1024);
 
-            Debug.WriteLine($"RAW: {raw}");
+            //Debug.WriteLine($"RAW: {raw}");
 
             _packet.SampleRaw = raw; // what is the range? 0...1023 ?
             _packet.SampleSmth = raw;
