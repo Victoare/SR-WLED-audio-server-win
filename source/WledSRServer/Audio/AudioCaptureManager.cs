@@ -1,5 +1,4 @@
 ﻿using NAudio.CoreAudioApi;
-using NAudio.Wave;
 using System.Data;
 using System.Diagnostics;
 using WledSRServer.Audio.AudioProcessor;
@@ -100,7 +99,7 @@ namespace WledSRServer.Audio
                 var deviceId = Properties.Settings.Default.AudioCaptureDeviceId;
                 var audioBufferMs = 50; // min. seems to be 50
                 if (string.IsNullOrEmpty(deviceId))
-                    return new WasapiLoopbackCapture();
+                    return new WasapiLoopbackCaptureEx(audioBufferMillisecondsLength: audioBufferMs);
                 else
                     return new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId), false, audioBufferMs);
             }
