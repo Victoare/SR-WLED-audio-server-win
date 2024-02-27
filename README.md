@@ -34,10 +34,10 @@ This is the main form where you can check if the capture is working, set some co
 In the top part you can select the **input device**. "Loopback" is for the general system sound. In the list you will find all the inputs your system has (like microphone, line input, webcam's mic, or other devices).
 You can see the state of the capture by checking the "**Capturing**" box next to the input device selector. Its background can be gray (for a split second when the system is starting, or new input device is selected), red (if any related error occours), yellow (if the capturing is working but only silence is detected) or green (if it senses sound).
 
-### FFT
+### Bars
 
 Below that there is the FFT bars. This is a visual representation of the information sent to WLEDs. They should move to the frequencies of the music. (The way it divides the sound to this bars is configurable below) 
-Also there is a **Beat** box what is should pulse to the beat. For now this is a very simple beat detection, don't count on it too much.
+Also there is a **Beat** box what is should pulse to the beat. For now this is a very simple beat detection, may evolve by time. Don't count on it too much yet.
 
 ### Settings
 
@@ -57,7 +57,7 @@ With **Value scaling** the bars "spikiness" can be emphasized or reduced. This s
 
 ### Network
 
-**SR Port** is the same port you have to set up in your WLED configuration page. By default, this is 11988.
+**SR Port** is the same port you have set in your WLED configuration page. By default, this is 11988.
 
 If the bars are jumping, the *Packet per second* shows a nonzero value, WLED is properly configured but still not reacting to your audio then try to set the **Local IP** to the IP your machine has in the network. If you start to type, it will autosuggest IPs it found on the network adapters and will show an error if the address is invalid, unusable, or malformed.
 
@@ -113,7 +113,7 @@ Some useful links:
 - https://github.com/MoonModules/WLED/releases 
 - https://wled-install.github.io/ 
 
-**Audioreactive mod source on aircookie's WLED**
+**Audioreactive mod source on Aircoookie's WLED**
 - https://github.com/Aircoookie/WLED/tree/main/usermods/audioreactive
 
 **Info on WLED-sync**
