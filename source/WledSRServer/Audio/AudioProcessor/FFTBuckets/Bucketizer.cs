@@ -26,6 +26,8 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
             _bucketCount = bucketCount;
             _valueScaler = GetValueScaler(valueScale);
             _freqPoints = GetFreqBands(freqMin, freqMax, logFreqScale, bucketCount);
+
+            // Debug.WriteLine($"FreqBands: {string.Join(";", _freqPoints.Select(f => f.ToString()))}");
         }
 
         private static double[] GetFreqBands(int freqMin, int freqMax, bool logFreqScale, int count)
@@ -41,11 +43,11 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
             switch (scale)
             {
                 case Scale.Linear:
-                    return (val) => val;
-                case Scale.Logarithmic:
-                    return (val) => val == 0 ? 0 : Math.Log(Math.Abs(val));
+                    return (val) => Math.Abs(val);
                 case Scale.SquareRoot:
                     return (val) => Math.Sqrt(Math.Abs(val));
+                case Scale.Logarithmic:
+                    return (val) => val == 0 ? 0 : Math.Max(0, Math.Log(Math.Abs(val) * 1000000));
             }
             throw new Exception("Invalid scaling");
         }
@@ -65,6 +67,8 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
 
         public override bool Process()
         {
+            // Debug.WriteLine($"FreqBands: {string.Join(";", _fft.Frequencies.Select(f => f.ToString()))}");
+
             for (var bucket = 0; bucket < _bucketCount; bucket++)
             {
                 var values = _fft.GetValuesByFreq(_freqPoints[bucket], _freqPoints[bucket + 1]);
