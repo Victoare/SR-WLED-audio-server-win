@@ -52,6 +52,7 @@ namespace WledSRServer.Audio.AudioProcessor
 
         public void Process(byte[] rawBytes, int length)
         {
+            // Debug.WriteLine($"Capture length : {length}");
             _raw.EnsureSize(length);
             Array.Copy(rawBytes, _raw.Values, length);
             _raw.Length = length;
