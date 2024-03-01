@@ -71,17 +71,23 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
                 var bucketCount = 0;
                 if (values.Any())
                 {
+                    _buckets.Values[bucket].Interpolated = false;
                     _buckets.Values[bucket].Value = values.Select(_valueScaler).Max();
-                    //_buckets.Values[bucket].Value = values.Select(_valueScaler).Average();
+                    // _buckets.Values[bucket].Value = values.Select(_valueScaler).Average();
                     bucketCount = values.Length;
                 }
                 else
                 {
-                    _buckets.Values[bucket].Value = 0;
+                    _buckets.Values[bucket].Interpolated = true;
                 }
 
                 _buckets.Values[bucket].DataCount = bucketCount;
             }
+
+            for (var bucket = 1; bucket < _bucketCount - 1; bucket++)
+                if (_buckets.Values[bucket].Interpolated)
+                    _buckets.Values[bucket].Value = (_buckets.Values[bucket - 1].Value + _buckets.Values[bucket + 1].Value) / 2;
+            // to improve: multi band interpolation
 
             return true;
         }

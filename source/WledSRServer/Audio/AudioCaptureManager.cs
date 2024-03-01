@@ -228,7 +228,7 @@ namespace WledSRServer.Audio
                                     ));
             chain.AddProcessor(new External<FFTBucketData>((bucketData) =>
             {
-                FFTfreqBands = bucketData.Values.Select(b => $"{b.FreqLow:F0}Hz - {b.FreqHigh:F0}Hz{(b.DataCount == 0 ? " [NO DATA]" : "")}").ToArray();
+                FFTfreqBands = bucketData.Values.Select(b => $"{b.FreqLow:F0}Hz - {b.FreqHigh:F0}Hz{(b.DataCount == 0 ? b.Interpolated ? " [<-/->]" : " [NO DATA]" : $" [{b.DataCount}]")}").ToArray();
             }));
             //chain.AddProcessor(new BucketAverager(10));
             chain.AddProcessor(new BucketAGC());

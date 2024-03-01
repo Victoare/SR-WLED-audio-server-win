@@ -7,6 +7,7 @@
             public double FreqLow { get; set; }
             public double FreqHigh { get; set; }
             public int DataCount { get; set; }
+            public bool Interpolated { get; set; }
             public double Value { get; set; }
         }
 
