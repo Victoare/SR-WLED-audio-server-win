@@ -205,7 +205,7 @@ namespace WledSRServer.Audio
             var chain = new AudioProcessChain();
             //chain.AddProcessor(new RawLogger("Begin"));
             chain.AddProcessor(new CheckRawSilence(onSilence));
-            //chain.AddProcessor(new RawAccumulator(50000));
+            chain.AddProcessor(new RawAccumulator((int)Math.Pow(2, 13))); // 13=8192 14=16384 (data length Wasapi 50ms~=11k, 100ms~=23K)
             //chain.AddProcessor(new RawLogger("After acc"));
             chain.AddProcessor(new SampleConverter(_capture.WaveFormat));
             chain.AddProcessor(new CheckSampleSilence(0.0001, onSilence));

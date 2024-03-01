@@ -23,7 +23,7 @@
 
         public override bool Process()
         {
-            if (_raw.Length > _accumulator.Values.Length) // Chop, nothing to accumulate
+            if (_raw.Length > _bytesToAccumulate) // Chop, nothing to accumulate
             {
                 _raw.Length = _bytesToAccumulate;
                 return true;
