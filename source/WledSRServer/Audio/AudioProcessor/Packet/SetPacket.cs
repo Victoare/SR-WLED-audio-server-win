@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using WledSRServer.Audio.AudioProcessor;
-using WledSRServer.Audio.AudioProcessor.FFT;
+﻿using WledSRServer.Audio.AudioProcessor.FFT;
 using WledSRServer.Audio.AudioProcessor.FFTBuckets;
 
 namespace WledSRServer.Audio.AudioProcessor.Packet

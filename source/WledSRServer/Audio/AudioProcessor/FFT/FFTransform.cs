@@ -1,5 +1,4 @@
 ﻿using FftSharp;
-using WledSRServer.Audio.AudioProcessor;
 
 namespace WledSRServer.Audio.AudioProcessor.FFT
 {

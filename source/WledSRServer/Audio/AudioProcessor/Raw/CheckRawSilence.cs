@@ -1,6 +1,4 @@
-﻿using WledSRServer.Audio.AudioProcessor;
-
-namespace WledSRServer.Audio.AudioProcessor.Raw
+﻿namespace WledSRServer.Audio.AudioProcessor.Raw
 {
     internal class CheckRawSilence : Processor
     {

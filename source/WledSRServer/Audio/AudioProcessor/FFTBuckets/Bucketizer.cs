@@ -1,5 +1,4 @@
-﻿using WledSRServer.Audio.AudioProcessor;
-using WledSRServer.Audio.AudioProcessor.FFT;
+﻿using WledSRServer.Audio.AudioProcessor.FFT;
 using static WledSRServer.Audio.AudioProcessor.FFTBuckets.FFTBucketData;
 
 namespace WledSRServer.Audio.AudioProcessor.FFTBuckets

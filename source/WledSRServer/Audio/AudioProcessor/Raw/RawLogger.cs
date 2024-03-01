@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using WledSRServer.Audio.AudioProcessor;
 
 namespace WledSRServer.Audio.AudioProcessor.Raw
 {

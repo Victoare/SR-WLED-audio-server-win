@@ -1,6 +1,4 @@
-﻿using WledSRServer.Audio.AudioProcessor;
-
-namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
+﻿namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
 {
     internal class BucketAverager : Processor
     {

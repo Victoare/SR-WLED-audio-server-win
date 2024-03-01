@@ -1,6 +1,4 @@
-﻿using WledSRServer.Audio.AudioProcessor;
-
-namespace WledSRServer.Audio.AudioProcessor.FFT
+﻿namespace WledSRServer.Audio.AudioProcessor.FFT
 {
     internal class BeatData : Context
     {

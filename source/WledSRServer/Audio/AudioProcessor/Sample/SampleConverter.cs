@@ -1,5 +1,4 @@
 ﻿using NAudio.Wave;
-using WledSRServer.Audio.AudioProcessor;
 using WledSRServer.Audio.AudioProcessor.Raw;
 
 namespace WledSRServer.Audio.AudioProcessor.Sample
