@@ -85,7 +85,7 @@ namespace WledSRServer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("7000")]
+        [global::System.Configuration.DefaultSettingValueAttribute("10000")]
         public int FFTHigh {
             get {
                 return ((int)(this["FFTHigh"]));
