@@ -43,8 +43,8 @@ namespace WledSRServer.Audio.AudioProcessor.Packet
             _packet.SampleSmth = raw;
             _packet.SamplePeak = (byte)(_beat.Detected ? 1 : 0);
 
-            _packet.FFT_Magnitude = (float)_fft.PeakValue;
-            _packet.FFT_MajorPeak = (float)_fft.PeakFrequency;
+            _packet.FFT_Magnitude = (float)_buckets.PeakValue;
+            _packet.FFT_MajorPeak = (float)_buckets.PeakFrequency;
 
             return true;
         }

@@ -1,4 +1,6 @@
-﻿namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
+﻿using FftSharp;
+
+namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
 {
     internal class FFTBucketData : Context
     {
@@ -12,5 +14,8 @@
         }
 
         public Bucket[] Values { get; set; } = Array.Empty<Bucket>();
+        
+        public double PeakValue { get; set; }
+        public double PeakFrequency { get; set; }
     }
 }

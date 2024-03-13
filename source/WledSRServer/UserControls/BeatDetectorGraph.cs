@@ -42,7 +42,8 @@ namespace WledSRServer.UserControls
 
             var indexes = fft.GetIndexesByFreq(dispFreqMin, dispFreqMax);
 
-            var scaleFFTValue = new Func<double, float>(v => this.Height - (float)(v / fft.PeakValue * this.Height));
+            var fftMaxValue = fft.Values.Max();
+            var scaleFFTValue = new Func<double, float>(v => this.Height - (float)(v / fftMaxValue * this.Height));
 
             //e.Graphics.Clear(Color.FromKnownColor(KnownColor.Control));
             if (beat.Detected)

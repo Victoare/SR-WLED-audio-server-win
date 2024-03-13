@@ -69,6 +69,11 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
         {
             // Debug.WriteLine($"FreqBands: {string.Join(";", _fft.Frequencies.Select(f => f.ToString()))}");
 
+            var freqIndexes = _fft.GetIndexesByFreq(_freqPoints[0], _freqPoints[_freqPoints.Length - 1]);
+            var peakIndex = freqIndexes.MaxBy(idx => _fft.Values[idx]);
+            _buckets.PeakValue = _fft.Values[peakIndex];
+            _buckets.PeakFrequency = _fft.Frequencies[peakIndex];
+
             for (var bucket = 0; bucket < _bucketCount; bucket++)
             {
                 var values = _fft.GetValuesByFreq(_freqPoints[bucket], _freqPoints[bucket + 1]);
