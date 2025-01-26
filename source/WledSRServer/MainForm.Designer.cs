@@ -37,7 +37,6 @@ namespace WledSRServer
             beatPixel1 = new BeatPixel();
             btnSettings = new Button();
             lblPPS = new Label();
-            label7 = new Label();
             tableLayoutPanel1 = new TableLayoutPanel();
             chbFFTLogFreq = new CheckBox();
             label6 = new Label();
@@ -99,7 +98,6 @@ namespace WledSRServer
             grpBottomPanel.Controls.Add(btnSettings);
             grpBottomPanel.Controls.Add(lblPPS);
             grpBottomPanel.Controls.Add(btnExitApplication);
-            grpBottomPanel.Controls.Add(label7);
             grpBottomPanel.Location = new Point(4, 203);
             grpBottomPanel.Name = "grpBottomPanel";
             grpBottomPanel.Size = new Size(643, 42);
@@ -142,19 +140,6 @@ namespace WledSRServer
             lblPPS.TabIndex = 4;
             lblPPS.Text = "Packet per second : --";
             lblPPS.TextAlign = ContentAlignment.MiddleRight;
-            // 
-            // label7
-            // 
-            label7.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            label7.AutoSize = true;
-            label7.Font = new Font("Segoe UI", 8.25F, FontStyle.Regular, GraphicsUnit.Point, 238);
-            label7.ForeColor = SystemColors.ControlDark;
-            label7.Location = new Point(297, 26);
-            label7.Name = "label7";
-            label7.Size = new Size(49, 13);
-            label7.TabIndex = 17;
-            label7.Text = "Victoare";
-            label7.TextAlign = ContentAlignment.BottomRight;
             // 
             // tableLayoutPanel1
             // 
@@ -400,9 +385,9 @@ namespace WledSRServer
             groupBox3.Controls.Add(label8);
             groupBox3.Controls.Add(ddlValueScale);
             groupBox3.Controls.Add(tableLayoutPanel1);
-            groupBox3.Location = new Point(159, -8);
+            groupBox3.Location = new Point(158, -8);
             groupBox3.Name = "groupBox3";
-            groupBox3.Size = new Size(329, 81);
+            groupBox3.Size = new Size(330, 81);
             groupBox3.TabIndex = 2;
             groupBox3.TabStop = false;
             // 
@@ -546,7 +531,6 @@ namespace WledSRServer
         private Label label5;
         private Button btnSettings;
         private GroupBox groupbox4;
-        private Label label7;
         private System.Windows.Forms.Timer tmrUpdateStats;
         private ComboBox ddlValueScale;
         private CheckBox chbFFTLogFreq;

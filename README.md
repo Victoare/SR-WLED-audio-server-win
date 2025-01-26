@@ -23,7 +23,7 @@ By default, the main form will open when the app starts.
 
 <div align="center" >
 
-![Main form](assets/Screenshots/Screenshot_5.png)
+![Main form](assets/Screenshots/Screenshot_6.png)
 
 </div>
 
