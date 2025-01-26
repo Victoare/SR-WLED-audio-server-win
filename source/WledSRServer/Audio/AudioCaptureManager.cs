@@ -235,6 +235,7 @@ namespace WledSRServer.Audio
             chain.AddProcessor(new SetPacket(Program.ServerContext.Packet));
             chain.AddProcessor(new External(() =>
             {
+                Program.ServerContext.Packet.FrameCounter++;
                 // Debug.WriteLine($"UpdateWatchers : {PacketUpdated?.GetInvocationList().Length}"); // check for proper unregistration
                 PacketUpdated?.Invoke();
             }));

@@ -5,6 +5,7 @@
         public double[] Values { get; private set; } = Array.Empty<double>();
         public int Length { get; set; }
         public double MaxSampleAbsValue { get; set; }
+        public double ZeroCrossingCount { get; set; }
 
         public void EnsureSize(int size)
         {
