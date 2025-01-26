@@ -26,7 +26,7 @@ namespace WledSRServer
             _notifyIcon.Visible = true;
 
             if (!IsLocalIPSettingCorrect())
-                ShowMainForm(showSettings: true);
+                ShowMainForm(showSettings: true, showAdvancedNetworkSettings: true);
 
             if (!Properties.Settings.Default.StartWithoutGUI)
                 ShowMainForm();
@@ -59,7 +59,7 @@ namespace WledSRServer
             Application.Exit();
         }
 
-        private void ShowMainForm(bool showSettings = false)
+        private void ShowMainForm(bool showSettings = false, bool showAdvancedNetworkSettings = false)
         {
             if (_mainForm?.Visible == true)
             {
@@ -72,7 +72,7 @@ namespace WledSRServer
                 _mainForm.Show();
             }
             if (showSettings)
-                _mainForm.ShowSettings();
+                _mainForm.ShowSettings(showAdvancedNetworkSettings);
         }
 
         internal void FormClosed(CloseReason closeReason)

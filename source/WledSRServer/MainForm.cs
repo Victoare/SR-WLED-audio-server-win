@@ -1,7 +1,10 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Net;
+using System.Reflection;
 using WledSRServer.Audio;
 using WledSRServer.Audio.AudioProcessor.FFTBuckets;
+using WledSRServer.Properties;
 
 namespace WledSRServer
 {
@@ -70,7 +73,22 @@ namespace WledSRServer
             txtFFTUpper.Text = settings.FFTHigh.ToString();
             txtFFTUpper.TextChanged += txtFFTUpper_TextChanged;
 
+            cbSendMode.Items.Clear();
+            //cbSendMode.Items.Add("Broadcast LAN (default)");
+
+            cbSendMode.DataSource = Enum.GetValues<NetworkManager.SendMode>().Select(e => new { val = (int)e, text = e.GetType().GetMember(e.ToString()).First().GetCustomAttributes<DisplayAttribute>().FirstOrDefault()?.Name ?? e.ToString() }).ToList();
+            cbSendMode.DisplayMember = "text";
+            cbSendMode.ValueMember = "val";
+            cbSendMode.SelectedValue = settings.NetworkSendMode;
+            cbSendMode.SelectedIndexChanged += cbSendMode_Changed;
+            cbSendMode_Changed(null, null);
+
+            txtRelevantIP.TextChanged += txtRelevantIP_TextChanged;
+
             toolTip1.InitialDelay = 100;
+
+            pnlSettings.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            pnlSettings.AutoSize = true;
 
             Program.ServerContext.PacketCounter = 0;
             PPSwatch.Start();
@@ -134,10 +152,11 @@ namespace WledSRServer
             pnlSettings.Visible = !pnlSettings.Visible;
         }
 
-        internal void ShowSettings()
+        internal void ShowSettings(bool showAdvancedNetworkSettings = false)
         {
             txtLocalIpAddress_Changed(null, null); //re-check
             pnlSettings.Visible = true;
+            if (showAdvancedNetworkSettings) pnlSettings.Visible = true;
         }
 
         private void SetToolTip(Control control, string? toolTip)
@@ -288,5 +307,92 @@ namespace WledSRServer
         }
 
         #endregion
+
+
+        private bool cbSendMode_change = false;
+        private void cbSendMode_Changed(object sender, EventArgs e)
+        {
+            var newValue = (int)(cbSendMode.SelectedValue ?? 0);
+            Properties.Settings.Default.NetworkSendMode = newValue;
+            Properties.Settings.Default.Save();
+            NetworkManager.ReStart();
+
+            cbSendMode_change = true;
+
+            switch ((NetworkManager.SendMode)newValue)
+            {
+                case NetworkManager.SendMode.BroadcastLAN:
+                    lblRelevantIP.Text = "Broadcast IP";
+                    txtRelevantIP.Text = "255.255.255.255";
+                    txtRelevantIP.Enabled = false;
+                    break;
+                case NetworkManager.SendMode.BroadcastSubNet:
+                    lblRelevantIP.Text = "Broadcast IP";
+                    txtRelevantIP.Text = Settings.Default.NetworkBroadcastIPList;
+                    txtRelevantIP.Enabled = true;
+                    break;
+                case NetworkManager.SendMode.Multicast:
+                    lblRelevantIP.Text = "Multicast IP";
+                    txtRelevantIP.Text = "239.0.0.1";
+                    txtRelevantIP.Enabled = false;
+                    break;
+                case NetworkManager.SendMode.TargetIPList:
+                    lblRelevantIP.Text = "Target IP list";
+                    txtRelevantIP.Text = Settings.Default.NetworkTargetIPList;
+                    txtRelevantIP.Enabled = true;
+                    break;
+            }
+
+            cbSendMode_change = false;
+        }
+
+        private void btnAdvancedNetwork_Click(object sender, EventArgs e)
+        {
+            gbAdvancedNetwork.Visible = !gbAdvancedNetwork.Visible;
+        }
+
+        private void txtRelevantIP_TextChanged(object sender, EventArgs e)
+        {
+            if (cbSendMode_change) return;
+
+            bool save = false;
+
+            switch ((NetworkManager.SendMode)Settings.Default.NetworkSendMode)
+            {
+                case NetworkManager.SendMode.BroadcastSubNet:
+                    try
+                    {
+                        NetworkManager.IPAddressList(txtRelevantIP.Text);
+                        Settings.Default.NetworkBroadcastIPList = txtRelevantIP.Text;
+                        txtRelevantIP.BackColor = Color.White;
+                        save = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        txtRelevantIP.BackColor = Color.Salmon;
+                        SetToolTip(txtRelevantIP, "There is one or more invalid address in the list");
+                    }
+                    break;
+                case NetworkManager.SendMode.TargetIPList:
+                    try
+                    {
+                        NetworkManager.IPAddressList(txtRelevantIP.Text);
+                        Settings.Default.NetworkTargetIPList = txtRelevantIP.Text;
+                        txtRelevantIP.BackColor = Color.White;
+                        save = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        txtRelevantIP.BackColor = Color.Salmon;
+                        SetToolTip(txtRelevantIP, "There is one or more invalid address in the list");
+                    }
+                    break;
+            }
+
+            if (!save) return;
+
+            Properties.Settings.Default.Save();
+            NetworkManager.ReStart();
+        }
     }
 }

@@ -1,7 +1,10 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Configuration;
+using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using WledSRServer.Audio;
 using WledSRServer.Properties;
 
@@ -12,6 +15,24 @@ namespace WledSRServer
         private static Thread? _managerThread;
         private volatile static bool _keepThreadRunning = true;
         private volatile static AutoResetEvent _restartNetworkClient = new(false);
+        private static List<IPEndPoint> endpoints = new();
+
+        public static string NetworkError = "";
+
+        public enum SendMode
+        {
+            [Display(Name = "Broadcast LAN (default)")]
+            BroadcastLAN = 0,
+
+            [Display(Name = "Broadcast SubNet")]
+            BroadcastSubNet = 1,
+
+            [Display(Name = "Multicast")]
+            Multicast = 2,
+
+            [Display(Name = "Target IP List")]
+            TargetIPList = 3,
+        }
 
         public static void Run()
         {
@@ -49,12 +70,12 @@ namespace WledSRServer
                     .Select(ua => ua.Address.ToString())
                     .ToArray();
 
-        private static IPEndPoint endpoint => new IPEndPoint(IPAddress.Parse("239.0.0.1"), Properties.Settings.Default.WledUdpMulticastPort);
+
         private static IPAddress localIPToBind
         {
             get
             {
-                if (!IPAddress.TryParse(Properties.Settings.Default.LocalIPToBind, out var address))
+                if (!IPAddress.TryParse(Settings.Default.LocalIPToBind, out var address))
                     if (!IPAddress.TryParse(GetLocalIPAddresses().FirstOrDefault(), out address))
                         address = IPAddress.Any;
                 return address;
@@ -70,7 +91,8 @@ namespace WledSRServer
                     client.Client.Bind(new IPEndPoint(localIp, 0));
                     client.MulticastLoopback = false;
                     var testPacket = new byte[5]; // intentionally wrong packet!
-                    client.Send(testPacket, endpoint);
+                    foreach (var ep in endpoints)
+                        client.Send(testPacket, ep);
                     client.Close();
                 }
             }
@@ -82,6 +104,11 @@ namespace WledSRServer
 
             error = null;
             return true;
+        }
+
+        public static List<IPAddress> IPAddressList(string list)
+        {
+            return Regex.Split(list, "[^0-9.]").Where(s => !string.IsNullOrWhiteSpace(s)).Select(IPAddress.Parse).ToList();
         }
 
         private static void SenderThread()
@@ -98,7 +125,32 @@ namespace WledSRServer
                     {
                         Debug.WriteLine($"NETWORK: Bind");
                         client.Client.Bind(new IPEndPoint(localIPToBind, 0));
-                        client.MulticastLoopback = false;
+
+                        //var IpListSplitter = new Regex("^(?:(?:(?:0{0,2}\\d|0?[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5])\\.){3}(?:0{0,2}\\d|0?[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5]))$");
+                        var IpListSplitter = new Regex("[^0-9.]");
+
+                        switch (Settings.Default.NetworkSendMode)
+                        {
+                            case (int)SendMode.Multicast:
+                                endpoints = new() { new IPEndPoint(IPAddress.Parse("239.0.0.1"), Settings.Default.WledUdpMulticastPort) };
+                                client.JoinMulticastGroup(endpoints.First().Address, localIPToBind); // Needs IGMP Snooping on the router!
+                                //client.MulticastLoopback = true;
+                                break;
+                            case (int)SendMode.BroadcastSubNet:
+                                // subnet broadcast would be: 192.168.0.255 for /8 subnets
+                                endpoints = IPAddressList(Settings.Default.NetworkBroadcastIPList)
+                                                          .Select(ip => new IPEndPoint(ip, Settings.Default.WledUdpMulticastPort)).ToList();
+                                client.EnableBroadcast = true;
+                                break;
+                            case (int)SendMode.TargetIPList:
+                                endpoints = IPAddressList(Settings.Default.NetworkTargetIPList)
+                                                          .Select(ip => new IPEndPoint(ip, Settings.Default.WledUdpMulticastPort)).ToList();
+                                break;
+                            default: // case (int)SendMode.BroadcastLAN:
+                                endpoints = new() { new IPEndPoint(IPAddress.Parse("255.255.255.255"), Settings.Default.WledUdpMulticastPort) };
+                                client.EnableBroadcast = true;
+                                break;
+                        }
 
                         #region Check if default local ip has changed (and reset client if needed)
 
@@ -106,7 +158,7 @@ namespace WledSRServer
 
                         if (string.IsNullOrEmpty(Settings.Default.LocalIPToBind))
                         {
-                            // sometimes after Hibernation the automatic IP detection (when Properties.Settings.Default.LocalIPToBind is empty) detects the wrong address
+                            // sometimes after Hibernation the automatic IP detection (when Settings.Default.LocalIPToBind is empty) detects the wrong address
                             ipCheckTimer = new System.Threading.Timer(new TimerCallback((_) =>
                             {
                                 if ((client.Client.LocalEndPoint is not IPEndPoint clientEndpoint) ||
@@ -127,7 +179,8 @@ namespace WledSRServer
                             {
                                 if (swPackageTiming.ElapsedMilliseconds > 1000 / maxPPS)
                                 {
-                                    client.Send(Program.ServerContext.Packet.AsByteArray(), endpoint);
+                                    foreach (var ep in endpoints)
+                                        client.Send(Program.ServerContext.Packet.AsByteArray(), ep);
                                     Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Sending;
                                     Program.ServerContext.PacketSendErrorMessage = string.Empty;
                                     swPackageTiming.Restart();

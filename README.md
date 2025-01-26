@@ -59,7 +59,9 @@ With **Value scaling** the bars "spikiness" can be emphasized or reduced. This s
 
 **SR Port** is the same port you have set in your WLED configuration page. By default, this is 11988.
 
-If the bars are jumping, the *Packet per second* shows a nonzero value, WLED is properly configured but still not reacting to your audio then try to set the **Local IP** to the IP your machine has in the network. If you start to type, it will autosuggest IPs it found on the network adapters and will show an error if the address is invalid, unusable, or malformed.
+If the bars are jumping, the *Packet per second* shows a nonzero value, WLED is properly configured but still not reacting to your audio then click on "**advanced network**" and try to set the **Local IP** to the IP your machine has in the network. If you start to type, it will autosuggest IPs it found on the network adapters and will show an error if the address is invalid, unusable, or malformed.
+
+Also there is a bit more configuraion for the tech savy people you can check in the Network-Advanced section.
 
 ### The rest
 
@@ -92,7 +94,18 @@ If the basic settings are working, then you have to enable the AudioReactive mod
 Open the Info window and check if it is turned on (the power icon should be green). If everything is working, then you should see: "*Audio Source : UDP sound sync - receiving*" and "*UDP Sound Sync : receive mode v2*" there.
 If you only see "*Audio Source : UDP sound sync - idle*" it means, the wled is waiting for the audio data.
 
-## Connection issues
+## Network - Advanced
+
+By default (**Broadcast LAN**) the client will send broadcast packages to the whole network. This should reach your WLED modules wherever they are on your local network.
+
+However, if you fancy (and know what are you doing), you can limit these packages by setting up **send mode**:
+- **Broadcast SubNet** will send the packages only to the given part of your network. With it, you have to setup the broadcast address (list) according to your desired subnet(s).
+- **Multicast** will use wled's "original concept", which is UDP multicasting. It needs IGMP snooping on the router(s) and probably won't work on consumer grade devices by default.
+- **Target IP List** is for when you want to direcly target WLED instance(s). Only they will receive the packages.
+
+Where list can be applied, the addresses can be separated by anything other than numbers or dot. (space, coma, colon, whatever)
+
+### Connection issues
 
 Due to the nature of UDP, especially UDP multicast (the connection type used by soundreactive wled), the app has no information if the package reaches any destination or not. Therefore, if all the settings seem to be fine there is a slight possibility that the network hardware has issues with this kind of communication. 
 (I am also using consumer grade network equipment to develop and to use this app, so it should work, but there is no guarantee)

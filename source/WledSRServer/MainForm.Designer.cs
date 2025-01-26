@@ -37,6 +37,7 @@ namespace WledSRServer
             beatPixel1 = new BeatPixel();
             btnSettings = new Button();
             lblPPS = new Label();
+            label7 = new Label();
             tableLayoutPanel1 = new TableLayoutPanel();
             chbFFTLogFreq = new CheckBox();
             label6 = new Label();
@@ -56,14 +57,19 @@ namespace WledSRServer
             lblCapturing = new Label();
             label3 = new Label();
             toolTip1 = new ToolTip(components);
+            label10 = new Label();
+            lblRelevantIP = new Label();
+            txtRelevantIP = new TextBox();
+            cbSendMode = new ComboBox();
             groupBox3 = new GroupBox();
             label8 = new Label();
             ddlValueScale = new ComboBox();
             groupbox4 = new GroupBox();
-            label7 = new Label();
             tmrUpdateStats = new System.Windows.Forms.Timer(components);
             pnlSettings = new Panel();
             groupBox1 = new GroupBox();
+            btnAdvancedNetwork = new Button();
+            gbAdvancedNetwork = new GroupBox();
             grpBottomPanel.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             groupBox2.SuspendLayout();
@@ -71,6 +77,7 @@ namespace WledSRServer
             groupbox4.SuspendLayout();
             pnlSettings.SuspendLayout();
             groupBox1.SuspendLayout();
+            gbAdvancedNetwork.SuspendLayout();
             SuspendLayout();
             // 
             // btnExitApplication
@@ -92,6 +99,7 @@ namespace WledSRServer
             grpBottomPanel.Controls.Add(btnSettings);
             grpBottomPanel.Controls.Add(lblPPS);
             grpBottomPanel.Controls.Add(btnExitApplication);
+            grpBottomPanel.Controls.Add(label7);
             grpBottomPanel.Location = new Point(4, 203);
             grpBottomPanel.Name = "grpBottomPanel";
             grpBottomPanel.Size = new Size(643, 42);
@@ -135,6 +143,19 @@ namespace WledSRServer
             lblPPS.Text = "Packet per second : --";
             lblPPS.TextAlign = ContentAlignment.MiddleRight;
             // 
+            // label7
+            // 
+            label7.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            label7.AutoSize = true;
+            label7.Font = new Font("Segoe UI", 8.25F, FontStyle.Regular, GraphicsUnit.Point, 238);
+            label7.ForeColor = SystemColors.ControlDark;
+            label7.Location = new Point(297, 26);
+            label7.Name = "label7";
+            label7.Size = new Size(49, 13);
+            label7.TabIndex = 17;
+            label7.Text = "Victoare";
+            label7.TextAlign = ContentAlignment.BottomRight;
+            // 
             // tableLayoutPanel1
             // 
             tableLayoutPanel1.ColumnCount = 6;
@@ -150,7 +171,7 @@ namespace WledSRServer
             tableLayoutPanel1.Controls.Add(label5, 2, 0);
             tableLayoutPanel1.Controls.Add(label4, 0, 0);
             tableLayoutPanel1.Controls.Add(txtFFTLower, 1, 0);
-            tableLayoutPanel1.Location = new Point(5, 15);
+            tableLayoutPanel1.Location = new Point(6, 15);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 1;
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -227,11 +248,11 @@ namespace WledSRServer
             // 
             // txtLocalIpAddress
             // 
-            txtLocalIpAddress.Location = new Point(55, 20);
+            txtLocalIpAddress.Location = new Point(542, 17);
             txtLocalIpAddress.MaxLength = 15;
             txtLocalIpAddress.Name = "txtLocalIpAddress";
             txtLocalIpAddress.Size = new Size(91, 23);
-            txtLocalIpAddress.TabIndex = 1;
+            txtLocalIpAddress.TabIndex = 0;
             txtLocalIpAddress.Text = "192.168.100.100";
             // 
             // btnSetStartupGUI
@@ -249,7 +270,7 @@ namespace WledSRServer
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(9, 53);
+            label2.Location = new Point(31, 22);
             label2.Name = "label2";
             label2.Size = new Size(45, 15);
             label2.TabIndex = 10;
@@ -270,7 +291,7 @@ namespace WledSRServer
             // 
             // txtUdpPort
             // 
-            txtUdpPort.Location = new Point(55, 50);
+            txtUdpPort.Location = new Point(79, 18);
             txtUdpPort.MaxLength = 5;
             txtUdpPort.Name = "txtUdpPort";
             txtUdpPort.Size = new Size(40, 23);
@@ -280,11 +301,11 @@ namespace WledSRServer
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(8, 24);
+            label1.Location = new Point(446, 21);
             label1.Name = "label1";
-            label1.Size = new Size(48, 15);
+            label1.Size = new Size(90, 15);
             label1.TabIndex = 10;
-            label1.Text = "Local IP";
+            label1.Text = "Local (server) IP";
             toolTip1.SetToolTip(label1, "IP address of the local machine (if needed)");
             // 
             // ddlAudioDevices
@@ -337,21 +358,58 @@ namespace WledSRServer
             label3.TabIndex = 12;
             label3.Text = "Input device";
             // 
+            // label10
+            // 
+            label10.AutoSize = true;
+            label10.Location = new Point(11, 21);
+            label10.Name = "label10";
+            label10.Size = new Size(67, 15);
+            label10.TabIndex = 19;
+            label10.Text = "Send mode";
+            toolTip1.SetToolTip(label10, "Package sending mode");
+            // 
+            // lblRelevantIP
+            // 
+            lblRelevantIP.AutoSize = true;
+            lblRelevantIP.Location = new Point(10, 49);
+            lblRelevantIP.Name = "lblRelevantIP";
+            lblRelevantIP.Size = new Size(71, 15);
+            lblRelevantIP.TabIndex = 24;
+            lblRelevantIP.Text = "Target IP list";
+            toolTip1.SetToolTip(lblRelevantIP, "Relevant IP settings.");
+            // 
+            // txtRelevantIP
+            // 
+            txtRelevantIP.Location = new Point(84, 45);
+            txtRelevantIP.Name = "txtRelevantIP";
+            txtRelevantIP.Size = new Size(549, 23);
+            txtRelevantIP.TabIndex = 2;
+            // 
+            // cbSendMode
+            // 
+            cbSendMode.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbSendMode.FormattingEnabled = true;
+            cbSendMode.Items.AddRange(new object[] { "LAN Broadcast (default)", "Subnet Broadcast", "Multicast", "Direct IP targeting" });
+            cbSendMode.Location = new Point(84, 17);
+            cbSendMode.Name = "cbSendMode";
+            cbSendMode.Size = new Size(166, 23);
+            cbSendMode.TabIndex = 1;
+            // 
             // groupBox3
             // 
             groupBox3.Controls.Add(label8);
             groupBox3.Controls.Add(ddlValueScale);
             groupBox3.Controls.Add(tableLayoutPanel1);
-            groupBox3.Location = new Point(154, -8);
+            groupBox3.Location = new Point(159, -8);
             groupBox3.Name = "groupBox3";
-            groupBox3.Size = new Size(335, 81);
+            groupBox3.Size = new Size(329, 81);
             groupBox3.TabIndex = 2;
             groupBox3.TabStop = false;
             // 
             // label8
             // 
             label8.AutoSize = true;
-            label8.Location = new Point(29, 52);
+            label8.Location = new Point(28, 52);
             label8.Name = "label8";
             label8.Size = new Size(75, 15);
             label8.TabIndex = 19;
@@ -361,7 +419,7 @@ namespace WledSRServer
             // 
             ddlValueScale.DropDownStyle = ComboBoxStyle.DropDownList;
             ddlValueScale.FormattingEnabled = true;
-            ddlValueScale.Location = new Point(109, 50);
+            ddlValueScale.Location = new Point(108, 50);
             ddlValueScale.Name = "ddlValueScale";
             ddlValueScale.Size = new Size(208, 23);
             ddlValueScale.TabIndex = 18;
@@ -371,24 +429,11 @@ namespace WledSRServer
             groupbox4.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             groupbox4.Controls.Add(btnSetStartupGUI);
             groupbox4.Controls.Add(btnSetAutoRun);
-            groupbox4.Location = new Point(0, -7);
+            groupbox4.Location = new Point(0, -8);
             groupbox4.Name = "groupbox4";
-            groupbox4.Size = new Size(151, 80);
+            groupbox4.Size = new Size(151, 81);
             groupbox4.TabIndex = 0;
             groupbox4.TabStop = false;
-            // 
-            // label7
-            // 
-            label7.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            label7.AutoSize = true;
-            label7.Font = new Font("Segoe UI", 8.25F, FontStyle.Regular, GraphicsUnit.Point, 238);
-            label7.ForeColor = SystemColors.ControlDark;
-            label7.Location = new Point(101, 66);
-            label7.Name = "label7";
-            label7.Size = new Size(49, 13);
-            label7.TabIndex = 17;
-            label7.Text = "Victoare";
-            label7.TextAlign = ContentAlignment.BottomRight;
             // 
             // tmrUpdateStats
             // 
@@ -396,27 +441,51 @@ namespace WledSRServer
             // 
             // pnlSettings
             // 
-            pnlSettings.Controls.Add(groupBox1);
-            pnlSettings.Controls.Add(groupbox4);
             pnlSettings.Controls.Add(groupBox3);
+            pnlSettings.Controls.Add(groupbox4);
+            pnlSettings.Controls.Add(groupBox1);
+            pnlSettings.Controls.Add(gbAdvancedNetwork);
             pnlSettings.Location = new Point(4, 248);
             pnlSettings.Name = "pnlSettings";
-            pnlSettings.Size = new Size(643, 76);
+            pnlSettings.Size = new Size(643, 269);
             pnlSettings.TabIndex = 8;
             pnlSettings.Visible = false;
             // 
             // groupBox1
             // 
-            groupBox1.Controls.Add(txtLocalIpAddress);
-            groupBox1.Controls.Add(label7);
+            groupBox1.Controls.Add(btnAdvancedNetwork);
             groupBox1.Controls.Add(txtUdpPort);
             groupBox1.Controls.Add(label2);
-            groupBox1.Controls.Add(label1);
             groupBox1.Location = new Point(492, -8);
             groupBox1.Name = "groupBox1";
             groupBox1.Size = new Size(151, 81);
             groupBox1.TabIndex = 1;
             groupBox1.TabStop = false;
+            // 
+            // btnAdvancedNetwork
+            // 
+            btnAdvancedNetwork.Location = new Point(7, 52);
+            btnAdvancedNetwork.Name = "btnAdvancedNetwork";
+            btnAdvancedNetwork.Size = new Size(137, 23);
+            btnAdvancedNetwork.TabIndex = 19;
+            btnAdvancedNetwork.Text = "🔣 Advanced network";
+            btnAdvancedNetwork.UseVisualStyleBackColor = true;
+            btnAdvancedNetwork.Click += btnAdvancedNetwork_Click;
+            // 
+            // gbAdvancedNetwork
+            // 
+            gbAdvancedNetwork.Controls.Add(txtRelevantIP);
+            gbAdvancedNetwork.Controls.Add(lblRelevantIP);
+            gbAdvancedNetwork.Controls.Add(cbSendMode);
+            gbAdvancedNetwork.Controls.Add(label10);
+            gbAdvancedNetwork.Controls.Add(txtLocalIpAddress);
+            gbAdvancedNetwork.Controls.Add(label1);
+            gbAdvancedNetwork.Location = new Point(0, 68);
+            gbAdvancedNetwork.Name = "gbAdvancedNetwork";
+            gbAdvancedNetwork.Size = new Size(643, 76);
+            gbAdvancedNetwork.TabIndex = 3;
+            gbAdvancedNetwork.TabStop = false;
+            gbAdvancedNetwork.Visible = false;
             // 
             // MainForm
             // 
@@ -424,7 +493,7 @@ namespace WledSRServer
             AutoScaleMode = AutoScaleMode.Font;
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            ClientSize = new Size(651, 324);
+            ClientSize = new Size(651, 523);
             Controls.Add(pnlSettings);
             Controls.Add(groupBox2);
             Controls.Add(fftDisplay2);
@@ -447,6 +516,8 @@ namespace WledSRServer
             pnlSettings.ResumeLayout(false);
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
+            gbAdvancedNetwork.ResumeLayout(false);
+            gbAdvancedNetwork.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -485,5 +556,11 @@ namespace WledSRServer
         private Label label8;
         private BeatPixel beatPixel1;
         private Label label9;
+        private Button btnAdvancedNetwork;
+        private GroupBox gbAdvancedNetwork;
+        private TextBox txtRelevantIP;
+        private Label lblRelevantIP;
+        private ComboBox cbSendMode;
+        private Label label10;
     }
 }
