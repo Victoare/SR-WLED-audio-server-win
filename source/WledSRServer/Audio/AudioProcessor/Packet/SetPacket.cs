@@ -48,11 +48,7 @@ namespace WledSRServer.Audio.AudioProcessor.Packet
 
             _packet.ZeroCrossingCount = (ushort)(_sample.ZeroCrossingCount / _sample.Length * 255);
 
-            // pressure calculation is whacky
-            // https://github.com/MoonModules/WLED/blob/f24d35e970ec04359d51d0d37ce9c0d12da381db/usermods/audioreactive/audio_reactive.h#L1715C1-L1721C54
-            var pressure = Math.Pow(_sample.MaxSampleAbsValue * 16, 2) * 256;
-            _packet.Pressure_integer = (byte)Math.Floor(pressure / 256);
-            _packet.Pressure_fraction = (byte)(pressure % 256);
+            _packet.Pressure = (float)Math.Pow(_sample.MaxSampleAbsValue * 16, 2);
 
             return true;
         }

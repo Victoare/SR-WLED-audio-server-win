@@ -34,11 +34,9 @@ namespace WledSRServer
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 6)]
         public string Header = "00002";
 
-        /// <summary>Sound pressure as two byte fixed point</summary>
-        [MarshalAs(UnmanagedType.U1)]
-        public byte Pressure_integer = 0;
-        [MarshalAs(UnmanagedType.U1)]
-        public byte Pressure_fraction = 0;
+        // https://github.com/MoonModules/WLED-MM/blob/7cb8eebba61e0e14f15cbf036f68f6030e9f5ca0/usermods/audioreactive/audio_reactive.h#L1715
+        /// <summary>Sound pressure as two byte fixed point. Should be 0..255 as 5db..105db</summary> 
+        public SoundPressure Pressure = 0;
 
         /// <summary>Either "sampleRaw" or "rawSampleAgc" depending on soundAgc setting</summary>
         [MarshalAs(UnmanagedType.R4)]
@@ -73,6 +71,34 @@ namespace WledSRServer
         public float FFT_MajorPeak;
     }
 
+    /// <summary>Sound pressure as two byte fixed point. Should be 0..255 as 5db..105db</summary> 
+    [StructLayout(LayoutKind.Sequential, Size = 2)]
+    internal struct SoundPressure
+    {
+        [MarshalAs(UnmanagedType.U1)]
+        byte Integer = 0;
+
+        [MarshalAs(UnmanagedType.U1)]
+        byte Fraction = 0;
+
+        public SoundPressure() { }
+
+        // https://github.com/MoonModules/WLED-MM/blob/7cb8eebba61e0Be14f15cbf036f68f6030e9f5ca0/usermods/audioreactive/audio_reactive.h#L1715
+        public static implicit operator SoundPressure(float value)
+        {
+            var clampedValue = (int)(Math.Clamp(value, 0, 255) * 256.0f);
+            var integerPart = (byte)Math.Floor(clampedValue / 256.0m);
+            var fractionPart = (byte)(clampedValue % 256);
+            return new SoundPressure { Integer = integerPart, Fraction = fractionPart };
+        }
+
+        public static implicit operator float(SoundPressure value)
+            => value.Integer + value.Fraction / 255.0f;
+
+        public static implicit operator SoundPressure(double value) => (float)value;
+        public static implicit operator double(SoundPressure value) => (double)value;
+    }
+
     internal static class AudioSyncPacketExtensions
     {
         public static void SetToZero(this AudioSyncPacket_v2 data)
@@ -83,8 +109,7 @@ namespace WledSRServer
             data.FFT_Bins = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
             data.FFT_Magnitude = 0;
             data.FFT_MajorPeak = 0;
-            data.Pressure_integer = 0;
-            data.Pressure_fraction = 0;
+            data.Pressure = 0;
             data.FrameCounter = 0;
             data.ZeroCrossingCount = 0;
         }
