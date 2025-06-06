@@ -11,6 +11,11 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
         private FFTData _fft;
         private FFTBucketData _buckets;
 
+        // loudest signals measured on my system, not too scientific, but good enough for now
+        private static float normScaleLinearMax = 0.001769422435994416f;
+        private static float normScaleLogarithmicMax = 7.4804198503512f;
+        private static float normScaleSquareRootMax = 0.04193937709831769f;
+
         public enum Scale
         {
             Linear,
@@ -43,11 +48,11 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
             switch (scale)
             {
                 case Scale.Linear:
-                    return (val) => Math.Abs(val);
+                    return (val) => Math.Abs(val) / normScaleLinearMax;
                 case Scale.SquareRoot:
-                    return (val) => Math.Sqrt(Math.Abs(val));
+                    return (val) => Math.Sqrt(Math.Abs(val)) / normScaleSquareRootMax;
                 case Scale.Logarithmic:
-                    return (val) => val == 0 ? 0 : Math.Max(0, Math.Log(Math.Abs(val) * 1000000));
+                    return (val) => val == 0 ? 0 : Math.Max(0, Math.Log(Math.Abs(val) * 1000000)) / normScaleLogarithmicMax;
             }
             throw new Exception("Invalid scaling");
         }
