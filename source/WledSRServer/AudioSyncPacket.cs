@@ -116,15 +116,19 @@ namespace WledSRServer
 
         public static void DecayValues(this AudioSyncPacket_v2 data, float decayRate)
         {
-            data.SampleRaw *= decayRate;
-            data.SampleSmth *= decayRate;
-            //data.samplePeak = ... ;
+            data.SampleRaw = DecayToZero(data.SampleRaw, decayRate);
+            data.SampleSmth = DecayToZero(data.SampleSmth, decayRate);
             for (var i = 0; i < data.FFT_Bins.Length; i++)
                 data.FFT_Bins[i] = (byte)Math.Floor(data.FFT_Bins[i] * decayRate);
-            data.FFT_Magnitude *= decayRate;
-            //data.FFT_MajorPeak = 0;
+            data.FFT_Magnitude = DecayToZero(data.FFT_Magnitude, decayRate);
+            data.Pressure = DecayToZero(data.Pressure, decayRate);
         }
 
+        private static float DecayToZero(float value, float decayRate)
+        {
+            if (value < 0.01f) return 0;
+            return value * decayRate;
+        }
 
         public static byte[] AsByteArray(this AudioSyncPacket_v2 data)
         {

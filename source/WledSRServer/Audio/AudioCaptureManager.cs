@@ -195,8 +195,13 @@ namespace WledSRServer.Audio
 
             var onSilence = () =>
             {
-                //Program.ServerContext.Packet.SetToZero();
+                // Program.ServerContext.Packet.SetToZero();
                 Program.ServerContext.Packet.DecayValues(0.85f);
+                Program.ServerContext.Packet.FFT_MajorPeak = 0;
+                Program.ServerContext.Packet.SamplePeak = 0;
+                Program.ServerContext.Packet.FrameCounter = 0; // without this, leds remains lit with like the last valid packet value
+                Program.ServerContext.Packet.ZeroCrossingCount = 0;
+
                 Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Silence;
                 Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
                 PacketUpdated?.Invoke();
