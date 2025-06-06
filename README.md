@@ -23,7 +23,7 @@ By default, the main form will open when the app starts.
 
 <div align="center" >
 
-![Main form](assets/Screenshots/Screenshot_6.png)
+![Main form](assets/Screenshots/Screenshot_7.png)
 
 </div>
 
@@ -54,6 +54,7 @@ Also, you can check **Start without GUI** and the app will only appear in the sy
 There is a setting for the **Frequency range** for the bars. By default, it is 40-10000hz to somewhat match the internal workings in WLED, but you can widen or tighten the range. Be aware that if the range is too tight, let's say 10-50hz to show only the super low frequencies, there is a possibility of having empty bars. This is not a bug nor a feature, just a side effect.
 The scale can be divided linearly or on a Logarithmic scale. The latter should work as our ears. If unchecked then the frequency range will be divided into 16 equal ranges.
 With **Value scaling** the bars "spikiness" can be emphasized or reduced. This settings works similar as the setting in WLED.
+If you fancied, you can click on the **Gain** button to access a bit more granual settings. Here you can turn off the automatic gain control and can take over manually.
 
 ### Network
 
