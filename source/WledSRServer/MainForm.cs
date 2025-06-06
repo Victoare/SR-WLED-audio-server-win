@@ -37,11 +37,17 @@ namespace WledSRServer
             btnSetAutoRun.CheckboxChecked = AdminFunctions.GetAutoRun();
             btnSetStartupGUI.CheckboxChecked = settings.StartWithoutGUI;
 
+            #region Audio devices
+
             ddlAudioDevices.DataSource = AudioCaptureManager.GetDevices();
             ddlAudioDevices.DisplayMember = nameof(AudioCaptureManager.SimpleDeviceDescriptor.Name);
             ddlAudioDevices.ValueMember = nameof(AudioCaptureManager.SimpleDeviceDescriptor.ID);
             ddlAudioDevices.SelectedValue = settings.AudioCaptureDeviceId;
             ddlAudioDevices.SelectedIndexChanged += ddlAudioDevices_Changed;
+
+            #endregion
+
+            #region FFT and Scaling
 
             ddlValueScale.ValueMember = "Key";
             ddlValueScale.DisplayMember = "Value";
@@ -55,6 +61,21 @@ namespace WledSRServer
 
             chbFFTLogFreq.Checked = settings.FFTFreqLogScale;
             chbFFTLogFreq.CheckedChanged += ChbFFTLogFreq_Changed;
+
+            #region Gain control
+
+            chbAutoGainControl.Checked = !settings.ManualGain;
+            chbAutoGainControl.CheckedChanged += chbAutoGainControl_Changed;
+
+            tbGainValue.Enabled = !chbAutoGainControl.Checked;
+            tbGainValue.Value = settings.ManualGainReference;
+            tbGainValue.ValueChanged += tbGainValue_ValueChanged;
+
+            #endregion
+
+            #endregion
+
+            #region Advanced Network Settings
 
             txtUdpPort.Text = settings.WledUdpMulticastPort.ToString();
             txtUdpPort.AutoCompleteCustomSource.Add("11988"); // the default one
@@ -85,8 +106,11 @@ namespace WledSRServer
 
             txtRelevantIP.TextChanged += txtRelevantIP_TextChanged;
 
+            #endregion
+
             toolTip1.InitialDelay = 100;
 
+            pnlSettings.MinimumSize = new Size(pnlSettingsMain.Width, pnlSettingsMain.Height);
             pnlSettings.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             pnlSettings.AutoSize = true;
 
@@ -256,7 +280,7 @@ namespace WledSRServer
 
         #endregion
 
-        #region FFT
+        #region FFT and Scaling
 
         private void txtFFTLower_TextChanged(object sender, EventArgs e)
         {
@@ -306,8 +330,38 @@ namespace WledSRServer
             AudioCaptureManager.RestartCapture();
         }
 
+        #region Gain settings
+
+        private void btnGainSettings_Click(object sender, EventArgs e)
+        {
+            gbGainControl.Visible = !gbGainControl.Visible;
+        }
+
+        private void chbAutoGainControl_Changed(object? sender, EventArgs e)
+        {
+            tbGainValue.Enabled = !chbAutoGainControl.Checked;
+            Properties.Settings.Default.ManualGain = !chbAutoGainControl.Checked;
+            Properties.Settings.Default.Save();
+            AudioCaptureManager.RestartCapture();
+        }
+
+        private void tbGainValue_ValueChanged(object? sender, EventArgs e)
+        {
+            Properties.Settings.Default.ManualGainReference = tbGainValue.Value;
+            Properties.Settings.Default.Save();
+            AudioCaptureManager.RestartCapture();
+        }
+
         #endregion
 
+        #endregion
+
+        #region Advanced Network Settings
+
+        private void btnAdvancedNetwork_Click(object sender, EventArgs e)
+        {
+            gbAdvancedNetwork.Visible = !gbAdvancedNetwork.Visible;
+        }
 
         private bool cbSendMode_change = false;
         private void cbSendMode_Changed(object sender, EventArgs e)
@@ -344,11 +398,6 @@ namespace WledSRServer
             }
 
             cbSendMode_change = false;
-        }
-
-        private void btnAdvancedNetwork_Click(object sender, EventArgs e)
-        {
-            gbAdvancedNetwork.Visible = !gbAdvancedNetwork.Visible;
         }
 
         private void txtRelevantIP_TextChanged(object sender, EventArgs e)
@@ -394,5 +443,7 @@ namespace WledSRServer
             Properties.Settings.Default.Save();
             NetworkManager.ReStart();
         }
+
+        #endregion
     }
 }

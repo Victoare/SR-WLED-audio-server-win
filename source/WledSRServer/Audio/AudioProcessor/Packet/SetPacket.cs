@@ -10,7 +10,7 @@ namespace WledSRServer.Audio.AudioProcessor.Packet
         private FFTData _fft;
         private BeatData _beat;
         private FFTBucketData _buckets;
-        private BucketAGCData _agc;
+        private BucketGainControlData _agc;
 
         public SetPacket(AudioSyncPacket_v2 packet)
         {
@@ -23,7 +23,7 @@ namespace WledSRServer.Audio.AudioProcessor.Packet
             _fft = chain.GetContext<FFTData>();
             _beat = chain.GetContext<BeatData>();
             _buckets = chain.GetContext<FFTBucketData>();
-            _agc = chain.GetContext<BucketAGCData>();
+            _agc = chain.GetContext<BucketGainControlData>();
         }
 
         public override bool Process()
