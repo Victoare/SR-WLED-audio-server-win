@@ -23,7 +23,7 @@
 
         public override bool Process()
         {
-            if (_raw.Length > _bytesToAccumulate) // Chop, nothing to accumulate
+            if (_raw.Length > _bytesToAccumulate) // Chop - too much data would lead to overaccumulation
             {
                 _raw.Length = _bytesToAccumulate;
                 return true;
@@ -42,11 +42,11 @@
 
             _raw.EnsureSize(_bytesToAccumulate);
 
-            Array.Copy(_accumulator.Values, 0, _raw.Values, 0, _bytesToAccumulate);
+            Array.Copy(_accumulator.Values, 0, _raw.Values, 0, _bytesToAccumulate); // set the required amount of raw data
             _raw.Length = _bytesToAccumulate;
 
             _accumulator.Length -= _bytesToAccumulate;
-            Array.Copy(_accumulator.Values, _bytesToAccumulate, _accumulator.Values, 0, _accumulator.Length);
+            Array.Copy(_accumulator.Values, _bytesToAccumulate, _accumulator.Values, 0, _accumulator.Length); // keep the rest of accumulated data
 
             return true;
         }
