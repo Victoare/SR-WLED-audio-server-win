@@ -179,6 +179,8 @@ namespace WledSRServer
                             {
                                 if (swPackageTiming.ElapsedMilliseconds > 1000 / maxPPS)
                                 {
+                                    Program.ServerContext.Packet.FrameCounter++;
+
                                     foreach (var ep in endpoints)
                                         client.Send(Program.ServerContext.Packet.AsByteArray(), ep);
                                     Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Sending;
