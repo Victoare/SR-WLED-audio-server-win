@@ -97,7 +97,7 @@ namespace WledSRServer.Audio
             try
             {
                 var deviceId = Properties.Settings.Default.AudioCaptureDeviceId;
-                var audioBufferMs = 50; // min. seems to be 50
+                var audioBufferMs = 10; // 25ms seems to be the minimum. Any lower will give the same timing of ~14ms.
                 if (string.IsNullOrEmpty(deviceId))
                     return new WasapiLoopbackCaptureEx(audioBufferMillisecondsLength: audioBufferMs);
                 else
@@ -136,8 +136,14 @@ namespace WledSRServer.Audio
             try
             {
                 var chain = SetupChain();
+                // var dataAvailableSW = Stopwatch.StartNew();
                 ActiveChain = chain;
-                _capture.DataAvailable += (s, e) => chain.Process(e.Buffer, e.BytesRecorded);
+                _capture.DataAvailable += (s, e) =>
+                {
+                    // Debug.WriteLine($"_capture.DataAvailable called after {dataAvailableSW.Elapsed.TotalMilliseconds:0.00} ms. BytesRecorded: {e.BytesRecorded}");
+                    // dataAvailableSW.Restart();
+                    chain.Process(e.Buffer, e.BytesRecorded);
+                };
             }
             catch (Exception ex)
             {

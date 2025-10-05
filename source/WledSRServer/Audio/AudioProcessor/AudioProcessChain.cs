@@ -93,7 +93,7 @@ namespace WledSRServer.Audio.AudioProcessor
 
             var totalRuntime = _processorRuntimes.Sum(kvp => kvp.Value) ?? 0;
             var processSpeed = totalRuntime > 0 ? (1000000 / totalRuntime) : 0;
-            Debug.WriteLine($"AudioProcessChain: Processed {length} bytes in {totalRuntime:0.00} µs ({processSpeed:0.00} Hz)");
+            //Debug.WriteLine($"AudioProcessChain: Processed {length} bytes in {totalRuntime:0.00} µs ({processSpeed:0.00} Hz)");
         }
     }
 }
