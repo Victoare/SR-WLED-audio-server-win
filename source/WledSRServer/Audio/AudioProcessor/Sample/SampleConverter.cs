@@ -54,9 +54,6 @@ namespace WledSRServer.Audio.AudioProcessor.Sample
             _sample.EnsureSize(_sample.Length);
 
             var pos = 0;
-            var max = 0.0;
-            var zeroCrossings = 0;
-
             for (int i = 0; i < _sample.Length; i++)
             {
                 var avg = 0.0;
@@ -66,19 +63,10 @@ namespace WledSRServer.Audio.AudioProcessor.Sample
                     pos += _bytesPerSample;
                 }
                 _sample.Values[i] = avg / _channels;
-                max = Math.Max(max, Math.Abs(_sample.Values[i]));
-
-                if (i > 0)
-                {
-                    if (_sample.Values[i - 1] > 0 && _sample.Values[i] <= 0) zeroCrossings++;
-                    if (_sample.Values[i - 1] < 0 && _sample.Values[i] >= 0) zeroCrossings++;
-                }
 
                 // int position = (i + channelToCapture) * _capture.WaveFormat.BlockAlign;
                 // values[i] = converter(e.Buffer, position);
             }
-            _sample.ZeroCrossingCount = zeroCrossings;
-            _sample.MaxSampleAbsValue = max;
 
             return true;
 
