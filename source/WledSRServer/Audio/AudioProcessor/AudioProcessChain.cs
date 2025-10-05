@@ -19,15 +19,37 @@ namespace WledSRServer.Audio.AudioProcessor
 
         private RawData _raw;
 
+        #region Builder
+
+        internal class AudioProcessChainBuilder
+        {
+            private AudioProcessChain _chain = new AudioProcessChain();
+
+            public AudioProcessChainBuilder AddProcessor(Processor processor)
+            {
+                _chain._processors.Add(processor);
+                processor.Init(_chain);
+                return this;
+            }
+
+            public AudioProcessChain Build()
+            {
+                return _chain;
+            }
+        }
+
+        public static AudioProcessChain Build(Action<AudioProcessChainBuilder> builder)
+        {
+            var b = new AudioProcessChainBuilder();
+            builder.Invoke(b);
+            return b.Build();
+        }
+
+        #endregion
+
         public AudioProcessChain()
         {
             _raw = DefineContext(new RawData());
-        }
-
-        public void AddProcessor(Processor processor)
-        {
-            _processors.Add(processor);
-            processor.Init(this);
         }
 
         public TContext GetContext<TContext>() where TContext : Context

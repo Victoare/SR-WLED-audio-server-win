@@ -207,47 +207,49 @@ namespace WledSRServer.Audio
                 PacketUpdated?.Invoke();
             };
 
-            var chain = new AudioProcessChain();
-            //chain.AddProcessor(new RawLogger("Begin"));
-            chain.AddProcessor(new CheckRawSilence(onSilence));
-            chain.AddProcessor(new RawAccumulator((int)Math.Pow(2, 13))); // 13=8192 14=16384 (data length Wasapi 50ms~=11k, 100ms~=23K)
-            //chain.AddProcessor(new RawLogger("After acc"));
-            chain.AddProcessor(new SampleConverter(_capture.WaveFormat));
-            chain.AddProcessor(new CheckSampleSilence(0.0001, onSilence));
-            chain.AddProcessor(new External(() =>
+            return AudioProcessChain.Build(chainBuilder =>
             {
-                Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
-                Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
-            }));
-            chain.AddProcessor(new FFTransform(
-                                        new FftSharp.Windows.FlatTop(),
-                                        _capture.WaveFormat.SampleRate
-                                   ));
-            chain.AddProcessor(new BeatDetector(100, 500));
-            chain.AddProcessor(new Bucketizer(
-                                        16,
-                                        settings.FFTLow,
-                                        settings.FFTHigh,
-                                        settings.FFTFreqLogScale,
-                                        Bucketizer.ScaleFromString(settings.FFTValueScale, Bucketizer.Scale.SquareRoot)
-                                    ));
-            chain.AddProcessor(new External<FFTBucketData>((bucketData) =>
-            {
-                FFTfreqBands = bucketData.Values.Select(b => $"{b.FreqLow:F0}Hz - {b.FreqHigh:F0}Hz{(b.DataCount == 0 ? b.Interpolated ? " [<-/->]" : " [NO DATA]" : $" [{b.DataCount}]")}").ToArray();
-            }));
-            //chain.AddProcessor(new BucketAverager(10));
-            chain.AddProcessor(new BucketGainControl(
-                manual: settings.ManualGain,
-                manualSpanReference: settings.ManualGainReference
-            ));
-            chain.AddProcessor(new SetPacket(Program.ServerContext.Packet));
-            chain.AddProcessor(new External(() =>
-            {
-                // Debug.WriteLine($"UpdateWatchers : {PacketUpdated?.GetInvocationList().Length}"); // check for proper unregistration
-                PacketUpdated?.Invoke();
-            }));
-
-            return chain;
+                //chainBuilder.AddProcessor(new RawLogger("Begin"));
+                chainBuilder.AddProcessor(new CheckRawSilence(onSilence));
+                //chainBuilder.AddProcessor(new RawAccumulator((int)Math.Pow(2, 13))); // 13=8192 14=16384 (data length Wasapi audioBufferMs:50ms~=11k, audioBufferMs:100ms~=23K)
+                //chainBuilder.AddProcessor(new RawLogger("After acc"));
+                chainBuilder.AddProcessor(new SampleConverter(_capture.WaveFormat));
+                chainBuilder.AddProcessor(new SampleAccumulator((int)Math.Pow(2, 11), (int)Math.Pow(2, 10))); // FFT needs 2^n samples. FFT resoultion would be half of this
+                chainBuilder.AddProcessor(new CalculateSampleStatistics());
+                chainBuilder.AddProcessor(new CheckSampleSilence(0.0001, onSilence));
+                chainBuilder.AddProcessor(new External(() =>
+                {
+                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
+                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
+                }));
+                chainBuilder.AddProcessor(new FFTransform(
+                                            new FftSharp.Windows.FlatTop(),
+                                            _capture.WaveFormat.SampleRate
+                                       ));
+                chainBuilder.AddProcessor(new BeatDetector(100, 500));
+                chainBuilder.AddProcessor(new Bucketizer(
+                                            16,
+                                            settings.FFTLow,
+                                            settings.FFTHigh,
+                                            settings.FFTFreqLogScale,
+                                            Bucketizer.ScaleFromString(settings.FFTValueScale, Bucketizer.Scale.SquareRoot)
+                                        ));
+                chainBuilder.AddProcessor(new External<FFTBucketData>((bucketData) =>
+                {
+                    FFTfreqBands = bucketData.Values.Select(b => $"{b.FreqLow:F0}Hz - {b.FreqHigh:F0}Hz{(b.DataCount == 0 ? b.Interpolated ? " [<-/->]" : " [NO DATA]" : $" [{b.DataCount}]")}").ToArray();
+                }));
+                //chainBuilder.AddProcessor(new BucketAverager(10));
+                chainBuilder.AddProcessor(new BucketGainControl(
+                    manual: settings.ManualGain,
+                    manualSpanReference: settings.ManualGainReference
+                ));
+                chainBuilder.AddProcessor(new SetPacket(Program.ServerContext.Packet));
+                chainBuilder.AddProcessor(new External(() =>
+                {
+                    // Debug.WriteLine($"UpdateWatchers : {PacketUpdated?.GetInvocationList().Length}"); // check for proper unregistration
+                    PacketUpdated?.Invoke();
+                }));
+            });
         }
     }
 }
