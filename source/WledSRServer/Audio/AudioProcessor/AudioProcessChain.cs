@@ -1,4 +1,5 @@
-﻿using WledSRServer.Audio.AudioProcessor.Raw;
+﻿using System.Diagnostics;
+using WledSRServer.Audio.AudioProcessor.Raw;
 
 namespace WledSRServer.Audio.AudioProcessor
 {
@@ -14,9 +15,11 @@ namespace WledSRServer.Audio.AudioProcessor
 
     internal class AudioProcessChain
     {
-        private Dictionary<Type, Context> _contextStore = new Dictionary<Type, Context>();
         private List<Processor> _processors = new List<Processor>();
+        private Dictionary<Processor, double?> _processorRuntimes = new();
+        private Stopwatch _processorRuntimeSW = new Stopwatch();
 
+        private Dictionary<Type, Context> _contextStore = new Dictionary<Type, Context>();
         private RawData _raw;
 
         #region Builder
@@ -74,12 +77,23 @@ namespace WledSRServer.Audio.AudioProcessor
 
         public void Process(byte[] rawBytes, int length)
         {
+            _processors.ForEach(p => _processorRuntimes[p] = null);
+
             // Debug.WriteLine($"Capture length : {length}");
             _raw.EnsureSize(length);
             Array.Copy(rawBytes, _raw.Values, length);
             _raw.Length = length;
             foreach (var p in _processors)
-                if (!p.Process()) break;
+            {
+                _processorRuntimeSW.Restart();
+                var cont = p.Process();
+                _processorRuntimes[p] = _processorRuntimeSW.Elapsed.TotalMicroseconds;
+                if (!cont) break;
+            }
+
+            var totalRuntime = _processorRuntimes.Sum(kvp => kvp.Value) ?? 0;
+            var processSpeed = totalRuntime > 0 ? (1000000 / totalRuntime) : 0;
+            Debug.WriteLine($"AudioProcessChain: Processed {length} bytes in {totalRuntime:0.00} µs ({processSpeed:0.00} Hz)");
         }
     }
 }
