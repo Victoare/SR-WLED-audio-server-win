@@ -113,8 +113,6 @@ namespace WledSRServer
 
         private static void SenderThread()
         {
-            var maxPPS = 45; // Pack("frame") per second (max 50!)
-
             while (_keepThreadRunning)
             {
                 Exception? exception = null;
@@ -177,19 +175,18 @@ namespace WledSRServer
                         {
                             try
                             {
-                                if (swPackageTiming.ElapsedMilliseconds > 1000 / maxPPS)
-                                {
-                                    Program.ServerContext.Packet.FrameCounter++;
+                                Program.ServerContext.Packet.FrameCounter++;
 
-                                    foreach (var ep in endpoints)
-                                        client.Send(Program.ServerContext.Packet.AsByteArray(), ep);
-                                    Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Sending;
-                                    Program.ServerContext.PacketSendErrorMessage = string.Empty;
-                                    swPackageTiming.Restart();
+                                foreach (var ep in endpoints)
+                                    client.Send(Program.ServerContext.Packet.AsByteArray(), ep);
 
-                                    Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
-                                    if (Program.ServerContext.PacketCounter > 100) Program.ServerContext.PacketCounter = 0;
-                                }
+                                Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Sending;
+                                Program.ServerContext.PacketSendErrorMessage = string.Empty;
+
+                                swPackageTiming.Restart();
+
+                                Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
+                                if (Program.ServerContext.PacketCounter > 10000) Program.ServerContext.PacketCounter = 0;
                             }
                             catch (Exception ex)
                             {
@@ -205,6 +202,7 @@ namespace WledSRServer
                             sendPacket();
                         }), null, 500, 500);
 
+                        // sync to Audio events
                         var sendPacketHandler = new AudioCaptureManager.PacketUpdatedHandler(sendPacket);
                         AudioCaptureManager.PacketUpdated += sendPacketHandler;
 
@@ -212,6 +210,7 @@ namespace WledSRServer
 
                         AudioCaptureManager.PacketUpdated -= sendPacketHandler;
                         autoPacketTimer?.Dispose();
+
                         ipCheckTimer?.Dispose();
 
                         client.Close();
