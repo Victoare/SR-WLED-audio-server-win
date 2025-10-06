@@ -97,7 +97,7 @@ namespace WledSRServer.Audio
             try
             {
                 var deviceId = Properties.Settings.Default.AudioCaptureDeviceId;
-                var audioBufferMs = 10; // 25ms seems to be the minimum. Any lower will give the same timing of ~14ms.
+                var audioBufferMs = 10; // 25ms seems to be the minimum. Any lower will give the same timing of ~14ms -> (Default Windows timer resolution).
                 if (string.IsNullOrEmpty(deviceId))
                     return new WasapiLoopbackCaptureEx(audioBufferMillisecondsLength: audioBufferMs);
                 else
