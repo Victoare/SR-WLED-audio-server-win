@@ -51,6 +51,15 @@ namespace WledSRServer.Audio.AudioProcessor.FFT
             // _fft.Values = FftSharp.FFT.Power(complexData, positiveOnly);     // value[i] = 20 * Math.Log10(value[i])
             _fft.Frequencies = FftSharp.FFT.FrequencyScale(_fft.Values.Length, _sampleRate, positiveOnly);
 
+            // _fft.Values.Max() -> 9.767696496175859E-09 (0.00000000977) -> Value after quietest sound
+            // usig FftSharp.FFT.Magnitude
+            // Sound : https://www.szynalski.com/tone-generator 1Khz sine devconsole->setVolume(0.00002) (windows volume irrelevant)
+
+            // Remove very small values (probably noise)
+            for (var i = 0; i < _fft.Values.Length; i++)
+                if (_fft.Values[i] < 0.000000001)
+                    _fft.Values[i] = 0;
+
             return true;
         }
     }
