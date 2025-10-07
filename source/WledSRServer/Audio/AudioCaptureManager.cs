@@ -222,7 +222,7 @@ namespace WledSRServer.Audio
                 chainBuilder.AddProcessor(new SampleConverter(_capture.WaveFormat));
                 chainBuilder.AddProcessor(new SampleAccumulator((int)Math.Pow(2, 11), (int)Math.Pow(2, 10))); // FFT needs 2^n samples. FFT resoultion would be half of this
                 chainBuilder.AddProcessor(new CalculateSampleStatistics());
-                chainBuilder.AddProcessor(new CheckSampleSilence(0.0001, onSilence));
+                chainBuilder.AddProcessor(new CheckSampleSilence(0.00001, onSilence));
                 chainBuilder.AddProcessor(new External(() =>
                 {
                     Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
