@@ -6,6 +6,10 @@ namespace WledSRServer.UserControls
 {
     public partial class BeatDetectorGraph : UserControl
     {
+        public double MinFreq { get; set; } = 10;
+        public double MaxFreq { get; set; } = 1000;
+        public bool BeatFlash { get; set; } = true;
+
         public BeatDetectorGraph()
         {
             InitializeComponent();
@@ -36,17 +40,18 @@ namespace WledSRServer.UserControls
             var bd = AudioCaptureManager.ActiveChain?.GetProcessor<BeatDetector>();
 
             if (fft == null || beat == null || bd == null) return;
+            if (fft.Values.Length == 0) return;
 
-            var dispFreqMin = 10;
-            var dispFreqMax = 1000;
+            var dispFreqMin = MinFreq;
+            var dispFreqMax = MaxFreq;
 
             var indexes = fft.GetIndexesByFreq(dispFreqMin, dispFreqMax);
 
-            var fftMaxValue = fft.Values.Max();
-            var scaleFFTValue = new Func<double, float>(v => this.Height - (float)(v / fftMaxValue * this.Height));
+            var fftMaxValue = fft.GetValuesByFreq(dispFreqMin, dispFreqMax).Max();
+            var scaleFFTValue = new Func<double, float>(v => this.Height - (fftMaxValue == 0 ? 0 : (float)(v / fftMaxValue * this.Height)));
 
             //e.Graphics.Clear(Color.FromKnownColor(KnownColor.Control));
-            if (beat.Detected)
+            if (beat.Detected && BeatFlash)
                 e.Graphics.Clear(Color.Silver);
             else
                 e.Graphics.Clear(Color.DarkGray);
