@@ -118,7 +118,7 @@ namespace WledSRServer
             PPSwatch.Start();
             tmrUpdateStats.Enabled = true;
 
-            beatPixel1.DoubleClick += (s, e) => new BeatTestForm().Show();
+            beatPixel1.DoubleClick += (s, e) => new InsidesForm().Show();
         }
 
         #region Periodic stats update

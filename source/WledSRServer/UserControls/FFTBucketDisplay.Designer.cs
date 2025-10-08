@@ -1,6 +1,6 @@
-﻿namespace WledSRServer.UserControls
+﻿namespace WledSRServer
 {
-    partial class BeatDetectorGraph
+    partial class FFTBucketDisplay
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,18 +28,21 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
+            toolTip1 = new ToolTip(components);
             SuspendLayout();
             // 
-            // FFTGraph
+            // FFTDisplay
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             DoubleBuffered = true;
-            Name = "FFTGraph";
-            Size = new Size(252, 146);
+            Name = "FFTDisplay";
+            Size = new Size(215, 112);
             ResumeLayout(false);
         }
 
         #endregion
+        private ToolTip toolTip1;
     }
 }

@@ -5,9 +5,9 @@ using WledSRServer.UserControls;
 
 namespace WledSRServer
 {
-    public partial class BeatTestForm : Form
+    public partial class InsidesForm : Form
     {
-        public BeatTestForm()
+        public InsidesForm()
         {
             InitializeComponent();
             rbDisplayRange_Low100.CheckedChanged += (s, e) => SetRange();

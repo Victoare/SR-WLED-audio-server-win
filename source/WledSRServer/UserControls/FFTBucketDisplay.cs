@@ -2,9 +2,9 @@
 
 namespace WledSRServer
 {
-    public partial class FFTDisplay : UserControl
+    public partial class FFTBucketDisplay : UserControl
     {
-        public FFTDisplay()
+        public FFTBucketDisplay()
         {
             InitializeComponent();
 

@@ -49,7 +49,7 @@ namespace WledSRServer
             btnSetAutoRun = new ButtonWithCheckbox();
             txtUdpPort = new TextBox();
             ddlAudioDevices = new ComboBox();
-            fftDisplay2 = new FFTDisplay();
+            fftDisplay2 = new FFTBucketDisplay();
             groupBox2 = new GroupBox();
             lblCapturing = new Label();
             label3 = new Label();
@@ -598,9 +598,9 @@ namespace WledSRServer
 
         #endregion
         private Button btnExitApplication;
-        private FFTDisplay fftDisplay1;
+        private FFTBucketDisplay fftDisplay1;
         private GroupBox grpBottomPanel;
-        private FFTDisplay fftDisplay2;
+        private FFTBucketDisplay fftDisplay2;
         private Label lblPPS;
         private ButtonWithCheckbox btnSetAutoRun;
         private ButtonWithCheckbox btnSetStartupGUI;

@@ -1,6 +1,6 @@
 ﻿namespace WledSRServer
 {
-    partial class BeatTestForm
+    partial class InsidesForm
     {
         /// <summary>
         /// Required designer variable.
@@ -28,8 +28,8 @@
         /// </summary>
         private void InitializeComponent()
         {
-            fftGraph1 = new WledSRServer.UserControls.BeatDetectorGraph();
             groupBox1 = new GroupBox();
+            fftGraph1 = new WledSRServer.UserControls.FFTGraph();
             panel1 = new Panel();
             lblFreqMax = new Label();
             lblFreqMin = new Label();
@@ -49,17 +49,6 @@
             flowLayoutPanel1.SuspendLayout();
             SuspendLayout();
             // 
-            // fftGraph1
-            // 
-            fftGraph1.BeatFlash = true;
-            fftGraph1.Dock = DockStyle.Fill;
-            fftGraph1.Location = new Point(3, 19);
-            fftGraph1.MaxFreq = 0D;
-            fftGraph1.MinFreq = 0D;
-            fftGraph1.Name = "fftGraph1";
-            fftGraph1.Size = new Size(958, 356);
-            fftGraph1.TabIndex = 0;
-            // 
             // groupBox1
             // 
             groupBox1.Controls.Add(fftGraph1);
@@ -71,6 +60,17 @@
             groupBox1.TabIndex = 1;
             groupBox1.TabStop = false;
             groupBox1.Text = "FFT data";
+            // 
+            // fftGraph1
+            // 
+            fftGraph1.BeatFlash = true;
+            fftGraph1.Dock = DockStyle.Fill;
+            fftGraph1.Location = new Point(3, 19);
+            fftGraph1.MaxFreq = 1000D;
+            fftGraph1.MinFreq = 10D;
+            fftGraph1.Name = "fftGraph1";
+            fftGraph1.Size = new Size(958, 356);
+            fftGraph1.TabIndex = 2;
             // 
             // panel1
             // 
@@ -220,15 +220,15 @@
             label1.Text = "Display range";
             label1.TextAlign = ContentAlignment.MiddleCenter;
             // 
-            // BeatTestForm
+            // InsidesForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(964, 452);
             Controls.Add(groupBox1);
             Controls.Add(groupBox2);
-            Name = "BeatTestForm";
-            Text = "Beat detector test form";
+            Name = "InsidesForm";
+            Text = "Inside workings test form";
             groupBox1.ResumeLayout(false);
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
@@ -242,7 +242,6 @@
 
         #endregion
 
-        private UserControls.BeatDetectorGraph fftGraph1;
         private GroupBox groupBox1;
         private GroupBox groupBox2;
         private Label label1;
@@ -256,5 +255,6 @@
         private RadioButton rbDisplayRange_Beat;
         private RadioButton rbDisplayRange_Settings;
         private RadioButton rbDisplayRange_Full;
+        private UserControls.FFTGraph fftGraph1;
     }
 }

@@ -1,6 +1,6 @@
-﻿namespace WledSRServer
+﻿namespace WledSRServer.UserControls
 {
-    partial class FFTDisplay
+    partial class FFTGraph
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,21 +28,18 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
-            toolTip1 = new ToolTip(components);
             SuspendLayout();
             // 
-            // FFTDisplay
+            // FFTGraph
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             DoubleBuffered = true;
-            Name = "FFTDisplay";
-            Size = new Size(215, 112);
+            Name = "FFTGraph";
+            Size = new Size(252, 146);
             ResumeLayout(false);
         }
 
         #endregion
-        private ToolTip toolTip1;
     }
 }
