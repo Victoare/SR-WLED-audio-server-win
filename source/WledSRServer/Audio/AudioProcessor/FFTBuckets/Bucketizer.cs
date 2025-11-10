@@ -43,6 +43,12 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
                 return Enumerable.Range(0, count + 1).Select(i => freqMin + (freqMax - freqMin) / (double)count * i).ToArray();
         }
 
+        /// <summary>
+        /// Scales the FFT value to a 0..1 range based on the selected scale
+        /// </summary>
+        /// <param name="scale"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         private static Func<double, double> GetValueScaler(Scale scale)
         {
             switch (scale)
@@ -76,7 +82,7 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
 
             var freqIndexes = _fft.GetIndexesByFreq(_freqPoints[0], _freqPoints[_freqPoints.Length - 1]);
             var peakIndex = freqIndexes.MaxBy(idx => _fft.Values[idx]);
-            _buckets.PeakValue = _fft.Values[peakIndex];
+            _buckets.PeakValue = _valueScaler(_fft.Values[peakIndex]);
             _buckets.PeakFrequency = _fft.Frequencies[peakIndex];
 
             for (var bucket = 0; bucket < _bucketCount; bucket++)
