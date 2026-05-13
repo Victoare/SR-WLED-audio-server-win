@@ -223,11 +223,6 @@ namespace WledSRServer.Audio
                 chainBuilder.AddProcessor(new SampleAccumulator((int)Math.Pow(2, 11), (int)Math.Pow(2, 10))); // FFT needs 2^n samples. FFT resoultion would be half of this
                 chainBuilder.AddProcessor(new CalculateSampleStatistics());
                 chainBuilder.AddProcessor(new CheckSampleSilence(0.00001, onSilence));
-                chainBuilder.AddProcessor(new External(() =>
-                {
-                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
-                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
-                }));
                 chainBuilder.AddProcessor(new FFTransform(
                                             new FftSharp.Windows.FlatTop(),
                                             _capture.WaveFormat.SampleRate
@@ -250,8 +245,12 @@ namespace WledSRServer.Audio
                     manualSpanReference: settings.ManualGainReference
                 ));
                 chainBuilder.AddProcessor(new SetPacket(Program.ServerContext.Packet));
+                chainBuilder.AddProcessor(new CheckPackeSilence(Program.ServerContext.Packet, 1000, onSilence));
                 chainBuilder.AddProcessor(new External(() =>
                 {
+                    Program.ServerContext.AudioCaptureStatus = AudioCaptureStatus.Capturing_Sound;
+                    Program.ServerContext.AudioCaptureErrorMessage = string.Empty;
+
                     // Debug.WriteLine($"UpdateWatchers : {PacketUpdated?.GetInvocationList().Length}"); // check for proper unregistration
                     PacketUpdated?.Invoke();
                 }));
