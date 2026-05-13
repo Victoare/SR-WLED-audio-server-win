@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="FftSharp" Version="2.2.0" />
-    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>
