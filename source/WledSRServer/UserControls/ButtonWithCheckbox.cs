@@ -1,4 +1,6 @@
-﻿namespace WledSRServer.UserControls
+﻿using System.ComponentModel;
+
+namespace WledSRServer.UserControls
 {
     public class ButtonWithCheckbox : Button
     {
@@ -28,6 +30,7 @@
             _chb.Invalidate();
         }
 
+        [DefaultValue(false)]
         public bool CheckboxChecked
         {
             get => _chb.Checked;

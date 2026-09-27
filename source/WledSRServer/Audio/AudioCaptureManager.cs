@@ -1,4 +1,5 @@
 ﻿using NAudio.CoreAudioApi;
+using NAudio.Wave;
 using System.Data;
 using System.Diagnostics;
 using WledSRServer.Audio.AudioProcessor;

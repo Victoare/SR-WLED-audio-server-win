@@ -1,13 +1,11 @@
 ﻿using NAudio.CoreAudioApi;
-using NAudio.CoreAudioApi.Interfaces;
 
 namespace WledSRServer.Audio
 {
-    // https://stackoverflow.com/questions/6163119/handling-changed-audio-device-event-in-c-sharp
-
-    internal class AudioDeviceEventWatcher : IMMNotificationClient, IDisposable
+    internal class AudioDeviceEventWatcher : IDisposable
     {
-        private MMDeviceEnumerator _deviceEnumerator = new();
+        private readonly MMDeviceEnumerator _deviceEnumerator = new();
+        private readonly MMDeviceNotificationClient _notificationClient;
         private bool _isDisposed = false;
 
         public delegate void DeviceStateChangedHandler(string deviceId, DeviceState newState);
@@ -24,34 +22,21 @@ namespace WledSRServer.Audio
 
         public AudioDeviceEventWatcher()
         {
-            _deviceEnumerator.RegisterEndpointNotificationCallback(this);
-        }
-
-        ~AudioDeviceEventWatcher()
-        {
-            Dispose();
+            // Events are raised on the Core Audio notification thread (the watcher lives on a background thread without a SynchronizationContext)
+            _notificationClient = _deviceEnumerator.CreateNotificationClient(useSynchronizationContext: false);
+            _notificationClient.DeviceStateChanged += (_, e) => DeviceStateChanged?.Invoke(e.DeviceId, e.NewState);
+            _notificationClient.DeviceAdded += (_, e) => DeviceAdded?.Invoke(e.DeviceId);
+            _notificationClient.DeviceRemoved += (_, e) => DeviceRemoved?.Invoke(e.DeviceId);
+            _notificationClient.DefaultDeviceChanged += (_, e) => DefaultDeviceChanged?.Invoke(e.Flow, e.Role, e.DeviceId);
+            _notificationClient.PropertyValueChanged += (_, e) => PropertyValueChanged?.Invoke(e.DeviceId, e.PropertyKey);
         }
 
         public void Dispose()
         {
             if (_isDisposed) return;
-            _deviceEnumerator.UnregisterEndpointNotificationCallback(this);
+            _notificationClient.Dispose();
+            _deviceEnumerator.Dispose();
             _isDisposed = true;
         }
-
-        void IMMNotificationClient.OnDeviceStateChanged(string deviceId, DeviceState newState)
-           => DeviceStateChanged?.Invoke(deviceId, newState);
-
-        void IMMNotificationClient.OnDeviceAdded(string pwstrDeviceId)
-            => DeviceAdded?.Invoke(pwstrDeviceId);
-
-        void IMMNotificationClient.OnDeviceRemoved(string deviceId)
-            => DeviceRemoved?.Invoke(deviceId);
-
-        void IMMNotificationClient.OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
-            => DefaultDeviceChanged?.Invoke(flow, role, defaultDeviceId);
-
-        void IMMNotificationClient.OnPropertyValueChanged(string pwstrDeviceId, PropertyKey key)
-            => PropertyValueChanged?.Invoke(pwstrDeviceId, key);
     }
 }

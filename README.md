@@ -77,7 +77,7 @@ That's all folks, I hope it will run smoothly :)
 ## "Install" / update
 
 To install, download the latest version from [releases](https://github.com/Victoare/SR-WLED-audio-server-win/releases/latest) (WledSRServer.zip) and put it somewhere on your machine. 
-The app is a portable one, without any fancy installer, but it needs .NET 8.0 runtime. If you don't have the runtime already installed, then you will be prompted to do so (giving you the link to the .NET installer) at the start.
+The app is a portable one, without any fancy installer, but it needs the .NET 10 Desktop Runtime (older versions up to v1.3.2 used .NET 8). If you don't have the runtime already installed, then you will be prompted to do so (giving you the link to the .NET installer) at the start.
 
 To update, just download the next version, stop the server if running, and overwrite the old one with the new.
 
