@@ -14,7 +14,13 @@ internal class Program
     public const string MboxTitle = "WLED SR Server";
 
     public static string Version(bool withCommitHash)
-        => Application.ProductVersion.Substring(0, Application.ProductVersion.IndexOf('+') + (withCommitHash ? 8 : 0));
+    {
+        var productVersion = Application.ProductVersion;
+        var plusIndex = productVersion.IndexOf('+');
+        if (plusIndex < 0)
+            return productVersion;
+        return productVersion.Substring(0, Math.Min(productVersion.Length, plusIndex + (withCommitHash ? 8 : 0)));
+    }
 
     [STAThread]
     private static void Main(string[] args)
@@ -65,18 +71,19 @@ internal class Program
 
     public static void LogException(Exception ex)
     {
-        var logFile = Path.Combine(Environment.CurrentDirectory, "exceptionlog.txt");
-        var writer = new StreamWriter(logFile, true);
-        writer.WriteLine($"===[ {DateTime.Now} ]==============================================================================");
-        writer.WriteLine($"App version: {Version(true)}");
-        writer.WriteLine($"Message: {ex.Message}");
-        writer.WriteLine($"Stack Trace");
-        writer.WriteLine($"{ex.StackTrace}");
-        writer.WriteLine($"Config values");
-        foreach (var prop in Settings.Default.Properties.OfType<SettingsProperty>().OrderBy(p => p.Name))
-            writer.WriteLine(@$"  {prop.Name} = ""{Settings.Default[prop.Name]}""");
-        writer.WriteLine();
-        writer.Close();
+        var logFile = Path.Combine(AppContext.BaseDirectory, "exceptionlog.txt");
+        using (var writer = new StreamWriter(logFile, true))
+        {
+            writer.WriteLine($"===[ {DateTime.Now} ]==============================================================================");
+            writer.WriteLine($"App version: {Version(true)}");
+            writer.WriteLine($"Message: {ex.Message}");
+            writer.WriteLine($"Stack Trace");
+            writer.WriteLine($"{ex.StackTrace}");
+            writer.WriteLine($"Config values");
+            foreach (var prop in Settings.Default.Properties.OfType<SettingsProperty>().OrderBy(p => p.Name))
+                writer.WriteLine(@$"  {prop.Name} = ""{Settings.Default[prop.Name]}""");
+            writer.WriteLine();
+        }
         MessageBox.Show("HOT DIGGITY DAMN!\n\nSomething unexpected happened.\n\nCan you help me out and send the exceptionlog.txt from the app directory?\n\nThanks.", MboxTitle);
     }
 
@@ -95,7 +102,7 @@ internal class Program
         }
 
         var value = setAutoRun.EndsWith("true", StringComparison.InvariantCultureIgnoreCase);
-        Environment.ExitCode = AdminFunctions.SetAutoRun(true) ? 0 : 1;
+        Environment.ExitCode = AdminFunctions.SetAutoRun(value) ? 0 : 1;
         return true;
     }
 }

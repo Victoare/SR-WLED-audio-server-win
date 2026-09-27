@@ -93,10 +93,10 @@ namespace WledSRServer
         }
 
         public static implicit operator float(SoundPressure value)
-            => value.Integer + value.Fraction / 255.0f;
+            => value.Integer + value.Fraction / 256.0f;
 
         public static implicit operator SoundPressure(double value) => (float)value;
-        public static implicit operator double(SoundPressure value) => (double)value;
+        public static implicit operator double(SoundPressure value) => (float)value;
     }
 
     internal static class AudioSyncPacketExtensions

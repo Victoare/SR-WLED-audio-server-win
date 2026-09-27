@@ -28,7 +28,11 @@ namespace WledSRServer.Audio.AudioProcessor.Sample
                 }
             }
             _sample.ZeroCrossingCount = zeroCrossings;
-            _sample.MaxSampleAbsValue = _sample.Values.Max(Math.Abs);
+
+            var maxAbsValue = 0.0;
+            for (int i = 0; i < _sample.Length; i++)
+                maxAbsValue = Math.Max(maxAbsValue, Math.Abs(_sample.Values[i]));
+            _sample.MaxSampleAbsValue = maxAbsValue;
 
             return true;
         }

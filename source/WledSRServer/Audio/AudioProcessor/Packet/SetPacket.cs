@@ -46,7 +46,7 @@ namespace WledSRServer.Audio.AudioProcessor.Packet
                 _packet.FFT_Bins[bucket] = (byte)Math.Clamp((_buckets.Values[bucket].Value + _agc.Offset) / _agc.Span * 255, 0, 255);
             }
 
-            var raw = (float)(bucketAvgValue / bucketMaxValue * 255);
+            var raw = bucketMaxValue > 0 ? (float)(bucketAvgValue / bucketMaxValue * 255) : 0f;
 
             _packet.SampleRaw = raw;
             _packet.SampleSmth = raw;

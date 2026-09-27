@@ -11,6 +11,8 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
 
     internal class BucketGainControl : Processor
     {
+        private const double MinSpan = 1e-6;
+
         private BucketGainControlData _agc;
         private FFTBucketData _buckets;
 
@@ -60,6 +62,9 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
                         _agc.Span = (_agc.Span * 90 + span * 10) / 100; // slower converge for quieter sounds
                 }
             }
+
+            // Span is used as a divisor: keep it positive (silent first frame, manual gain at 100)
+            _agc.Span = Math.Max(_agc.Span, MinSpan);
 
             // if (_agc.Span > max) // 0.042 seems to be the max in my system
             // {
