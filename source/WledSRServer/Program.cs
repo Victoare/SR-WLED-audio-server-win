@@ -49,6 +49,7 @@ internal class Program
                     Settings.Default.UpdateSettings = false;
                     Settings.Default.Save();
                 }
+                NetworkManager.MigrateLocalIPSetting();
 
                 AudioCaptureManager.Run();
                 NetworkManager.Run();

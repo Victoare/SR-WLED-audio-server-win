@@ -120,15 +120,79 @@ namespace WledSRServer
             }
         }
 
+        #region Local network selection
+
+        // Settings.Default.LocalIPToBind values:
+        //   ""              -> automatic (GetAutoLocalIPAddress)
+        //   "if:{id}"       -> a network interface (NetworkInterface.Id), its current IPv4 address is used
+        //   anything else   -> a manually entered IP address
+        public const string InterfacePrefix = "if:";
+
+        public record LocalInterface(string Id, string Name, IPAddress? Address);
+
+        /// <summary>
+        /// IPv4 capable network interfaces (Address is null if the interface is not connected)
+        /// </summary>
+        public static List<LocalInterface> GetLocalInterfaces()
+            => NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(ni => ni.Supports(NetworkInterfaceComponent.IPv4)
+                              && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback
+                              && !ni.IsReceiveOnly)
+                    .Select(ni => new LocalInterface(
+                        ni.Id,
+                        ni.Name,
+                        ni.OperationalStatus != OperationalStatus.Up ? null
+                            : ni.GetIPProperties().UnicastAddresses
+                                .Select(ua => ua.Address)
+                                .FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork)))
+                    .ToList();
+
+        public static string? GetInterfaceIdFromSetting(string setting)
+            => setting.StartsWith(InterfacePrefix) ? setting.Substring(InterfacePrefix.Length) : null;
+
+        /// <summary>
+        /// Old versions stored the local IP address only. If it belongs to a current interface, store the interface instead,
+        /// so a changing (DHCP) address does not break the setting.
+        /// </summary>
+        public static void MigrateLocalIPSetting()
+        {
+            if (!IPAddress.TryParse(Settings.Default.LocalIPToBind, out var address))
+                return;
+            var match = GetLocalInterfaces().FirstOrDefault(i => address.Equals(i.Address));
+            if (match == null)
+                return;
+            Settings.Default.LocalIPToBind = InterfacePrefix + match.Id;
+            Settings.Default.Save();
+        }
+
+        /// <summary>
+        /// The local IP address the packets are sent from with the current setting (null if none found)
+        /// </summary>
+        public static IPAddress? GetLocalIPToBind()
+            => localIPToBind.Equals(IPAddress.Any) ? null : localIPToBind;
+
         private static IPAddress localIPToBind
         {
             get
             {
-                if (IPAddress.TryParse(Settings.Default.LocalIPToBind, out var address))
-                    return address;
+                var setting = Settings.Default.LocalIPToBind;
+                var interfaceId = GetInterfaceIdFromSetting(setting);
+                if (interfaceId != null)
+                {
+                    // Selected interface not connected: fall back to the automatic selection
+                    var address = GetLocalInterfaces().FirstOrDefault(i => i.Id == interfaceId)?.Address;
+                    if (address != null)
+                        return address;
+                }
+                else if (IPAddress.TryParse(setting, out var manualAddress))
+                {
+                    return manualAddress;
+                }
                 return GetAutoLocalIPAddress() ?? IPAddress.Any;
             }
         }
+
+        #endregion
 
         public static bool TestLocalIP(IPAddress localIp, out string? error)
         {
@@ -202,7 +266,8 @@ namespace WledSRServer
 
                         System.Threading.Timer? ipCheckTimer = null;
 
-                        if (string.IsNullOrEmpty(Settings.Default.LocalIPToBind))
+                        // Automatic or interface selection: the address can change (DHCP, cable plugged back, ...)
+                        if (!IPAddress.TryParse(Settings.Default.LocalIPToBind, out _))
                         {
                             // sometimes after Hibernation the automatic IP detection (when Settings.Default.LocalIPToBind is empty) detects the wrong address
                             ipCheckTimer = new System.Threading.Timer(new TimerCallback((_) =>

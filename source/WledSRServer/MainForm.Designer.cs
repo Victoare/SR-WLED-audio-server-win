@@ -57,6 +57,7 @@ namespace WledSRServer
             lblRelevantIP = new Label();
             label10 = new Label();
             label1 = new Label();
+            lblLocalIp = new Label();
             groupBox3 = new GroupBox();
             btnGainSettings = new Button();
             label8 = new Label();
@@ -69,6 +70,7 @@ namespace WledSRServer
             txtRelevantIP = new TextBox();
             cbSendMode = new ComboBox();
             txtLocalIpAddress = new TextBox();
+            cbLocalNetwork = new ComboBox();
             gbGainControl = new GroupBox();
             chbAutoGainControl = new CheckBox();
             tbGainValue = new TrackBar();
@@ -357,12 +359,22 @@ namespace WledSRServer
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(446, 21);
+            label1.Location = new Point(381, 21);
             label1.Name = "label1";
-            label1.Size = new Size(90, 15);
+            label1.Size = new Size(80, 15);
             label1.TabIndex = 10;
-            label1.Text = "Local (server) IP";
-            toolTip1.SetToolTip(label1, "IP address of the local machine (if needed)");
+            label1.Text = "Local network";
+            toolTip1.SetToolTip(label1, "The network the packets are sent on.\r\nAutomatic works in most cases.");
+            //
+            // lblLocalIp
+            //
+            lblLocalIp.AutoSize = true;
+            lblLocalIp.Location = new Point(413, 49);
+            lblLocalIp.Name = "lblLocalIp";
+            lblLocalIp.Size = new Size(48, 15);
+            lblLocalIp.TabIndex = 11;
+            lblLocalIp.Text = "Local IP";
+            toolTip1.SetToolTip(lblLocalIp, "The IP address of this computer the packets are sent from.");
             // 
             // groupBox3
             // 
@@ -454,7 +466,9 @@ namespace WledSRServer
             gbAdvancedNetwork.Controls.Add(cbSendMode);
             gbAdvancedNetwork.Controls.Add(label10);
             gbAdvancedNetwork.Controls.Add(txtLocalIpAddress);
+            gbAdvancedNetwork.Controls.Add(cbLocalNetwork);
             gbAdvancedNetwork.Controls.Add(label1);
+            gbAdvancedNetwork.Controls.Add(lblLocalIp);
             gbAdvancedNetwork.Dock = DockStyle.Top;
             gbAdvancedNetwork.Location = new Point(0, 0);
             gbAdvancedNetwork.Margin = new Padding(0);
@@ -469,7 +483,7 @@ namespace WledSRServer
             // 
             txtRelevantIP.Location = new Point(84, 45);
             txtRelevantIP.Name = "txtRelevantIP";
-            txtRelevantIP.Size = new Size(549, 23);
+            txtRelevantIP.Size = new Size(166, 23);
             txtRelevantIP.TabIndex = 2;
             // 
             // cbSendMode
@@ -484,12 +498,25 @@ namespace WledSRServer
             // 
             // txtLocalIpAddress
             // 
-            txtLocalIpAddress.Location = new Point(542, 17);
+            txtLocalIpAddress.Location = new Point(467, 45);
             txtLocalIpAddress.MaxLength = 15;
             txtLocalIpAddress.Name = "txtLocalIpAddress";
-            txtLocalIpAddress.Size = new Size(91, 23);
+            txtLocalIpAddress.Size = new Size(166, 23);
             txtLocalIpAddress.TabIndex = 0;
             txtLocalIpAddress.Text = "192.168.100.100";
+            txtLocalIpAddress.ReadOnly = true;
+            txtLocalIpAddress.TabStop = false;
+            //
+            // cbLocalNetwork
+            //
+            cbLocalNetwork.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbLocalNetwork.DropDownWidth = 250;
+            cbLocalNetwork.FormattingEnabled = true;
+            cbLocalNetwork.Location = new Point(467, 17);
+            cbLocalNetwork.Name = "cbLocalNetwork";
+            cbLocalNetwork.Size = new Size(166, 23);
+            cbLocalNetwork.TabIndex = 3;
+            toolTip1.SetToolTip(cbLocalNetwork, "The network the packets are sent on.\r\nAutomatic works in most cases.");
             // 
             // gbGainControl
             // 
@@ -640,7 +667,9 @@ namespace WledSRServer
         private ComboBox cbSendMode;
         private Label label10;
         private TextBox txtLocalIpAddress;
+        private ComboBox cbLocalNetwork;
         private Label label1;
+        private Label lblLocalIp;
         private Panel pnlSettingsMain;
     }
 }
