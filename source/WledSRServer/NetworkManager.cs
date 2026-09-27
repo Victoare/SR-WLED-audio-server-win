@@ -71,15 +71,62 @@ namespace WledSRServer
                     .Select(ua => ua.Address.ToString())
                     .ToArray();
 
+        /// <summary>
+        /// Picks the local IPv4 address of the LAN interface (used when no local IP is set).
+        /// VPNs (Tailscale, ...), VirtualBox / Hyper-V / WSL adapters are often listed first, so the first address is not good enough:
+        /// prefer interfaces that have a default gateway, and among them the one Windows routes through.
+        /// </summary>
+        public static IPAddress? GetAutoLocalIPAddress()
+        {
+            var candidates = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(ni => ni.Supports(NetworkInterfaceComponent.IPv4)
+                          && ni.OperationalStatus == OperationalStatus.Up
+                          && !ni.IsReceiveOnly
+                          && ni.NetworkInterfaceType is not (NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel or NetworkInterfaceType.Ppp))
+                .Select(ni => (Properties: ni.GetIPProperties(), Interface: ni))
+                .SelectMany(ni => ni.Properties.UnicastAddresses
+                    .Where(ua => ua.Address.AddressFamily == AddressFamily.InterNetwork && ua.PrefixLength < 32) // /32: point-to-point (VPN), no broadcast
+                    .Select(ua => new
+                    {
+                        ua.Address,
+                        HasGateway = ni.Properties.GatewayAddresses.Any(g => g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any)),
+                    }))
+                .ToList();
+
+            var withGateway = candidates.Where(c => c.HasGateway).Select(c => c.Address).ToList();
+            if (withGateway.Count > 1)
+            {
+                // More LAN interfaces (e.g. Ethernet + Wi-Fi): use the one Windows would route through
+                var routed = GetRoutedLocalIPAddress();
+                if (routed != null && withGateway.Contains(routed))
+                    return routed;
+            }
+
+            return withGateway.FirstOrDefault() ?? candidates.Select(c => c.Address).FirstOrDefault();
+        }
+
+        // Source address Windows picks for an outside destination. Connecting a UDP socket sends no packet.
+        private static IPAddress? GetRoutedLocalIPAddress()
+        {
+            try
+            {
+                using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                socket.Connect(new IPEndPoint(IPAddress.Parse("8.8.8.8"), 53));
+                return (socket.LocalEndPoint as IPEndPoint)?.Address;
+            }
+            catch
+            {
+                return null;
+            }
+        }
 
         private static IPAddress localIPToBind
         {
             get
             {
-                if (!IPAddress.TryParse(Settings.Default.LocalIPToBind, out var address))
-                    if (!IPAddress.TryParse(GetLocalIPAddresses().FirstOrDefault(), out address))
-                        address = IPAddress.Any;
-                return address;
+                if (IPAddress.TryParse(Settings.Default.LocalIPToBind, out var address))
+                    return address;
+                return GetAutoLocalIPAddress() ?? IPAddress.Any;
             }
         }
 
