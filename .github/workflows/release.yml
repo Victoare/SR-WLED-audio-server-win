@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Read version
         id: version
@@ -48,7 +48,16 @@ jobs:
           exit 0
 
       - name: Publish
-        run: dotnet publish source/WledSRServer/WledSRServer.csproj -p:PublishProfile=FolderProfile -o publish
+        # Same settings as the local FolderProfile (*.pubxml is gitignored): framework-dependent single file
+        run: dotnet publish source/WledSRServer/WledSRServer.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true -p:PublishReadyToRun=false -o publish
+
+      - name: Check publish output
+        shell: pwsh
+        run: |
+          # Guard against an accidental self-contained build (runtime bundled into the exe)
+          $exe = Get-Item publish/WledSRServer.exe
+          if ($exe.Length -gt 10MB) { throw "WledSRServer.exe is $([math]::Round($exe.Length / 1MB)) MB - self-contained build?" }
+          Get-ChildItem publish | Format-Table Name, Length
 
       - name: Create zip
         shell: pwsh
