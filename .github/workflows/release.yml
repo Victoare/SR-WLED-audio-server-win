@@ -1,7 +1,7 @@
 # Creates a draft GitHub release for the version set in WledSRServer.csproj.
 # Review the notes on GitHub, then publish the draft (publishing creates the tag).
 
-name: Release
+name: Draft a release
 
 on:
   workflow_dispatch:
