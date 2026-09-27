@@ -71,7 +71,10 @@ namespace WledSRServer.Audio
             var audioDeviceEventWatcher = new AudioDeviceEventWatcher();
             audioDeviceEventWatcher.DefaultDeviceChanged += (flow, role, defaultDeviceId) =>
             {
-                Debug.WriteLine("ADEW: DefaultDeviceChanged");
+                Debug.WriteLine($"ADEW: DefaultDeviceChanged ({flow}, {role})");
+                // Only the default render/multimedia device is captured (see WasapiLoopbackCaptureEx.GetDefaultLoopbackCaptureDevice)
+                if (flow != DataFlow.Render || role != Role.Multimedia)
+                    return;
                 if (string.IsNullOrEmpty(Properties.Settings.Default.AudioCaptureDeviceId))
                 {
                     RestartCapture();

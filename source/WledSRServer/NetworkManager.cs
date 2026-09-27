@@ -16,6 +16,7 @@ namespace WledSRServer
         private volatile static bool _keepThreadRunning = true;
         private volatile static AutoResetEvent _restartNetworkClient = new(false);
         private static List<IPEndPoint> endpoints = new();
+        private static readonly object _sendLock = new();
 
         public static string NetworkError = "";
 
@@ -173,25 +174,30 @@ namespace WledSRServer
                         var swPackageTiming = Stopwatch.StartNew();
                         var sendPacket = new Action(() =>
                         {
-                            try
+                            // Called from both the audio thread and the auto packet timer
+                            lock (_sendLock)
                             {
-                                Program.ServerContext.Packet.FrameCounter++;
+                                try
+                                {
+                                    Program.ServerContext.Packet.FrameCounter++;
 
-                                foreach (var ep in endpoints)
-                                    client.Send(Program.ServerContext.Packet.AsByteArray(), ep);
+                                    var packetBytes = Program.ServerContext.Packet.AsByteArray();
+                                    foreach (var ep in endpoints)
+                                        client.Send(packetBytes, ep);
 
-                                Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Sending;
-                                Program.ServerContext.PacketSendErrorMessage = string.Empty;
+                                    Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Sending;
+                                    Program.ServerContext.PacketSendErrorMessage = string.Empty;
 
-                                swPackageTiming.Restart();
+                                    swPackageTiming.Restart();
 
-                                Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
-                                if (Program.ServerContext.PacketCounter > 10000) Program.ServerContext.PacketCounter = 0;
-                            }
-                            catch (Exception ex)
-                            {
-                                exception = ex;
-                                _restartNetworkClient.Set();
+                                    Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
+                                    if (Program.ServerContext.PacketCounter > 10000) Program.ServerContext.PacketCounter = 0;
+                                }
+                                catch (Exception ex)
+                                {
+                                    exception = ex;
+                                    _restartNetworkClient.Set();
+                                }
                             }
                         });
 
