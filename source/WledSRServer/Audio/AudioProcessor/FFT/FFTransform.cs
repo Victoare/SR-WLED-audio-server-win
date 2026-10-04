@@ -7,11 +7,25 @@ namespace WledSRServer.Audio.AudioProcessor.FFT
         public double[] Values { get; set; } = Array.Empty<double>();
         public double[] Frequencies { get; set; } = Array.Empty<double>();
 
+        // Frequencies are in ascending order, so the matching indexes form a contiguous range
         public int[] GetIndexesByFreq(double freqLow, double freqHigh)
-            => Frequencies.Select((freq, idx) => new { freq, idx })
-                          .Where(f => f.freq >= freqLow && f.freq <= freqHigh)
-                          .Select(f => f.idx)
-                          .ToArray();
+        {
+            var start = FirstIndexWhere(f => f >= freqLow);
+            var end = FirstIndexWhere(f => f > freqHigh);
+            return end > start ? Enumerable.Range(start, end - start).ToArray() : Array.Empty<int>();
+        }
+
+        private int FirstIndexWhere(Func<double, bool> predicate)
+        {
+            int low = 0, high = Frequencies.Length;
+            while (low < high)
+            {
+                var mid = (low + high) / 2;
+                if (predicate(Frequencies[mid])) high = mid;
+                else low = mid + 1;
+            }
+            return low;
+        }
 
         public double[] GetValuesByFreq(double freqLow, double freqHigh)
             => GetIndexesByFreq(freqLow, freqHigh).Select(idx => Values[idx]).ToArray();
@@ -49,7 +63,8 @@ namespace WledSRServer.Audio.AudioProcessor.FFT
 
             _fft.Values = FftSharp.FFT.Magnitude(complexData, positiveOnly);  // WLED based on Magnitude (Scaling appliend in bucketizer)
             // _fft.Values = FftSharp.FFT.Power(complexData, positiveOnly);     // value[i] = 20 * Math.Log10(value[i])
-            _fft.Frequencies = FftSharp.FFT.FrequencyScale(_fft.Values.Length, _sampleRate, positiveOnly);
+            if (_fft.Frequencies.Length != _fft.Values.Length)
+                _fft.Frequencies = FftSharp.FFT.FrequencyScale(_fft.Values.Length, _sampleRate, positiveOnly);
 
             // _fft.Values.Max() -> 9.767696496175859E-09 (0.00000000977) -> Value after quietest sound
             // usig FftSharp.FFT.Magnitude

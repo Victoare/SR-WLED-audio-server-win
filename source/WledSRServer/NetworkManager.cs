@@ -16,6 +16,7 @@ namespace WledSRServer
         private volatile static bool _keepThreadRunning = true;
         private volatile static AutoResetEvent _restartNetworkClient = new(false);
         private static List<IPEndPoint> endpoints = new();
+        private static readonly object _sendLock = new();
 
         public static string NetworkError = "";
 
@@ -70,17 +71,128 @@ namespace WledSRServer
                     .Select(ua => ua.Address.ToString())
                     .ToArray();
 
+        /// <summary>
+        /// Picks the local IPv4 address of the LAN interface (used when no local IP is set).
+        /// VPNs (Tailscale, ...), VirtualBox / Hyper-V / WSL adapters are often listed first, so the first address is not good enough:
+        /// prefer interfaces that have a default gateway, and among them the one Windows routes through.
+        /// </summary>
+        public static IPAddress? GetAutoLocalIPAddress()
+        {
+            var candidates = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(ni => ni.Supports(NetworkInterfaceComponent.IPv4)
+                          && ni.OperationalStatus == OperationalStatus.Up
+                          && !ni.IsReceiveOnly
+                          && ni.NetworkInterfaceType is not (NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel or NetworkInterfaceType.Ppp))
+                .Select(ni => (Properties: ni.GetIPProperties(), Interface: ni))
+                .SelectMany(ni => ni.Properties.UnicastAddresses
+                    .Where(ua => ua.Address.AddressFamily == AddressFamily.InterNetwork && ua.PrefixLength < 32) // /32: point-to-point (VPN), no broadcast
+                    .Select(ua => new
+                    {
+                        ua.Address,
+                        HasGateway = ni.Properties.GatewayAddresses.Any(g => g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any)),
+                    }))
+                .ToList();
+
+            var withGateway = candidates.Where(c => c.HasGateway).Select(c => c.Address).ToList();
+            if (withGateway.Count > 1)
+            {
+                // More LAN interfaces (e.g. Ethernet + Wi-Fi): use the one Windows would route through
+                var routed = GetRoutedLocalIPAddress();
+                if (routed != null && withGateway.Contains(routed))
+                    return routed;
+            }
+
+            return withGateway.FirstOrDefault() ?? candidates.Select(c => c.Address).FirstOrDefault();
+        }
+
+        // Source address Windows picks for an outside destination. Connecting a UDP socket sends no packet.
+        private static IPAddress? GetRoutedLocalIPAddress()
+        {
+            try
+            {
+                using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                socket.Connect(new IPEndPoint(IPAddress.Parse("8.8.8.8"), 53));
+                return (socket.LocalEndPoint as IPEndPoint)?.Address;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        #region Local network selection
+
+        // Settings.Default.LocalIPToBind values:
+        //   ""              -> automatic (GetAutoLocalIPAddress)
+        //   "if:{id}"       -> a network interface (NetworkInterface.Id), its current IPv4 address is used
+        //   anything else   -> a manually entered IP address
+        public const string InterfacePrefix = "if:";
+
+        public record LocalInterface(string Id, string Name, IPAddress? Address);
+
+        /// <summary>
+        /// IPv4 capable network interfaces (Address is null if the interface is not connected)
+        /// </summary>
+        public static List<LocalInterface> GetLocalInterfaces()
+            => NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(ni => ni.Supports(NetworkInterfaceComponent.IPv4)
+                              && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback
+                              && !ni.IsReceiveOnly)
+                    .Select(ni => new LocalInterface(
+                        ni.Id,
+                        ni.Name,
+                        ni.OperationalStatus != OperationalStatus.Up ? null
+                            : ni.GetIPProperties().UnicastAddresses
+                                .Select(ua => ua.Address)
+                                .FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork)))
+                    .ToList();
+
+        public static string? GetInterfaceIdFromSetting(string setting)
+            => setting.StartsWith(InterfacePrefix) ? setting.Substring(InterfacePrefix.Length) : null;
+
+        /// <summary>
+        /// Old versions stored the local IP address only. If it belongs to a current interface, store the interface instead,
+        /// so a changing (DHCP) address does not break the setting.
+        /// </summary>
+        public static void MigrateLocalIPSetting()
+        {
+            if (!IPAddress.TryParse(Settings.Default.LocalIPToBind, out var address))
+                return;
+            var match = GetLocalInterfaces().FirstOrDefault(i => address.Equals(i.Address));
+            if (match == null)
+                return;
+            Settings.Default.LocalIPToBind = InterfacePrefix + match.Id;
+            Settings.Default.Save();
+        }
+
+        /// <summary>
+        /// The local IP address the packets are sent from with the current setting (null if none found)
+        /// </summary>
+        public static IPAddress? GetLocalIPToBind()
+            => localIPToBind.Equals(IPAddress.Any) ? null : localIPToBind;
 
         private static IPAddress localIPToBind
         {
             get
             {
-                if (!IPAddress.TryParse(Settings.Default.LocalIPToBind, out var address))
-                    if (!IPAddress.TryParse(GetLocalIPAddresses().FirstOrDefault(), out address))
-                        address = IPAddress.Any;
-                return address;
+                var setting = Settings.Default.LocalIPToBind;
+                var interfaceId = GetInterfaceIdFromSetting(setting);
+                if (interfaceId != null)
+                {
+                    // Selected interface not connected: fall back to the automatic selection
+                    var address = GetLocalInterfaces().FirstOrDefault(i => i.Id == interfaceId)?.Address;
+                    if (address != null)
+                        return address;
+                }
+                else if (IPAddress.TryParse(setting, out var manualAddress))
+                {
+                    return manualAddress;
+                }
+                return GetAutoLocalIPAddress() ?? IPAddress.Any;
             }
         }
+
+        #endregion
 
         public static bool TestLocalIP(IPAddress localIp, out string? error)
         {
@@ -154,7 +266,8 @@ namespace WledSRServer
 
                         System.Threading.Timer? ipCheckTimer = null;
 
-                        if (string.IsNullOrEmpty(Settings.Default.LocalIPToBind))
+                        // Automatic or interface selection: the address can change (DHCP, cable plugged back, ...)
+                        if (!IPAddress.TryParse(Settings.Default.LocalIPToBind, out _))
                         {
                             // sometimes after Hibernation the automatic IP detection (when Settings.Default.LocalIPToBind is empty) detects the wrong address
                             ipCheckTimer = new System.Threading.Timer(new TimerCallback((_) =>
@@ -173,25 +286,30 @@ namespace WledSRServer
                         var swPackageTiming = Stopwatch.StartNew();
                         var sendPacket = new Action(() =>
                         {
-                            try
+                            // Called from both the audio thread and the auto packet timer
+                            lock (_sendLock)
                             {
-                                Program.ServerContext.Packet.FrameCounter++;
+                                try
+                                {
+                                    Program.ServerContext.Packet.FrameCounter++;
 
-                                foreach (var ep in endpoints)
-                                    client.Send(Program.ServerContext.Packet.AsByteArray(), ep);
+                                    var packetBytes = Program.ServerContext.Packet.AsByteArray();
+                                    foreach (var ep in endpoints)
+                                        client.Send(packetBytes, ep);
 
-                                Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Sending;
-                                Program.ServerContext.PacketSendErrorMessage = string.Empty;
+                                    Program.ServerContext.PacketSendingStatus = PacketSendingStatus.Sending;
+                                    Program.ServerContext.PacketSendErrorMessage = string.Empty;
 
-                                swPackageTiming.Restart();
+                                    swPackageTiming.Restart();
 
-                                Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
-                                if (Program.ServerContext.PacketCounter > 10000) Program.ServerContext.PacketCounter = 0;
-                            }
-                            catch (Exception ex)
-                            {
-                                exception = ex;
-                                _restartNetworkClient.Set();
+                                    Program.ServerContext.PacketCounter++; // = (Program.ServerContext.PacketCounter++) % 1000;
+                                    if (Program.ServerContext.PacketCounter > 10000) Program.ServerContext.PacketCounter = 0;
+                                }
+                                catch (Exception ex)
+                                {
+                                    exception = ex;
+                                    _restartNetworkClient.Set();
+                                }
                             }
                         });
 

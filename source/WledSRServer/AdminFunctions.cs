@@ -8,18 +8,22 @@ namespace WledSRServer
     internal static class AdminFunctions
     {
         private const string AppKey = "WLedSRServer";
+        private const string RunKeyPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
 
         public static bool SetAutoRun(bool value)
         {
             try
             {
-                RegistryKey registryKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
                 try
                 {
+                    using var registryKey = Registry.CurrentUser.OpenSubKey(RunKeyPath, true);
+                    if (registryKey == null)
+                        return false;
+
                     if (value)
                         registryKey.SetValue(AppKey, Application.ExecutablePath);
                     else
-                        registryKey.DeleteValue(AppKey);
+                        registryKey.DeleteValue(AppKey, false);
                 }
                 catch (SecurityException)
                 {
@@ -50,7 +54,7 @@ namespace WledSRServer
 
         public static bool GetAutoRun()
         {
-            RegistryKey registryKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false);
+            using var registryKey = Registry.CurrentUser.OpenSubKey(RunKeyPath, false);
             return registryKey?.GetValue(AppKey)?.ToString() == Application.ExecutablePath;
         }
 

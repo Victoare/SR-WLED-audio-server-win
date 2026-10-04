@@ -1,4 +1,7 @@
-﻿using NAudio.CoreAudioApi;
+﻿#if WINDOWS
+using NAudio.CoreAudioApi;
+#endif
+using NAudio.Wave;
 using System.Data;
 using System.Diagnostics;
 using System.Text.Json;
@@ -20,8 +23,10 @@ namespace WledSRServer.Audio
 
         public static SimpleDeviceDescriptor[] GetDevices()
         {
+#if WINDOWS
             if (OperatingSystem.IsWindows())
                 return GetDevicesWindows();
+#endif
 
             if (OperatingSystem.IsLinux())
                 return GetDevicesLinux();
@@ -29,6 +34,7 @@ namespace WledSRServer.Audio
             throw new PlatformNotSupportedException($"Audio device enumeration is not supported on {Environment.OSVersion.Platform}.");
         }
 
+#if WINDOWS
         private static SimpleDeviceDescriptor[] GetDevicesWindows()
         {
             var mmde = new MMDeviceEnumerator();
@@ -37,6 +43,7 @@ namespace WledSRServer.Audio
                             .Prepend(new SimpleDeviceDescriptor("", "Loopback (system output)"))
                             .ToArray();
         }
+#endif
 
         private sealed class PactlSource
         {
@@ -122,19 +129,24 @@ namespace WledSRServer.Audio
         {
             // Only WASAPI gives us default-device-changed notifications today; on Linux,
             // `parec --device=@DEFAULT_MONITOR@` is reconnected on each capture restart instead.
+#if WINDOWS
             AudioDeviceEventWatcher? audioDeviceEventWatcher = null;
             if (OperatingSystem.IsWindows())
             {
                 audioDeviceEventWatcher = new AudioDeviceEventWatcher();
                 audioDeviceEventWatcher.DefaultDeviceChanged += (flow, role, defaultDeviceId) =>
                 {
-                    Debug.WriteLine("ADEW: DefaultDeviceChanged");
+                    Debug.WriteLine($"ADEW: DefaultDeviceChanged ({flow}, {role})");
+                    // Only the default render/multimedia device is captured (see WasapiLoopbackCaptureEx.GetDefaultLoopbackCaptureDevice)
+                    if (flow != DataFlow.Render || role != Role.Multimedia)
+                        return;
                     if (string.IsNullOrEmpty(Properties.Settings.Default.AudioCaptureDeviceId))
                     {
                         RestartCapture();
                     }
                 };
             }
+#endif
 
             while (_autoRestartCapture)
             {
@@ -147,7 +159,9 @@ namespace WledSRServer.Audio
                 _captureStopped.Wait(); // wait capturing to stop
             }
 
+#if WINDOWS
             audioDeviceEventWatcher?.Dispose();
+#endif
         }
 
         private static IAudioCapture? SetupCaptureDevice()
@@ -156,6 +170,7 @@ namespace WledSRServer.Audio
             {
                 var deviceId = Properties.Settings.Default.AudioCaptureDeviceId;
 
+#if WINDOWS
                 if (OperatingSystem.IsWindows())
                 {
                     var audioBufferMs = 10; // 25ms seems to be the minimum. Any lower will give the same timing of ~14ms -> (Default Windows timer resolution).
@@ -164,6 +179,7 @@ namespace WledSRServer.Audio
                     else
                         return new WasapiAudioCapture(new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId), false, audioBufferMs));
                 }
+#endif
 
                 if (OperatingSystem.IsLinux())
                 {

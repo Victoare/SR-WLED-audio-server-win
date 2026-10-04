@@ -2,8 +2,8 @@
 
 Headless Linux console build of the audio → FFT/beat → WLED UDP sync pipeline. It shares
 its audio-processing and networking code with the Windows GUI app (`WledSRServer.csproj`)
-via linked source files, but is its own plain `net8.0` project because the Windows project
-is hardcoded to `net8.0-windows7.0`/`win-x64` and can never produce a Linux binary.
+via linked source files, but is its own plain `net10.0` project because the Windows project
+is hardcoded to `net10.0-windows7.0`/`win-x64` and can never produce a Linux binary.
 
 This exists mainly to run this app's audio processing side by side with a real WLED
 device, both fed the same signal (this machine's line-out, cabled into WLED's line-in),

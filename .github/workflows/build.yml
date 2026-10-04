@@ -1,0 +1,35 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build source/WledSRServer.sln -c Release
+
+      - name: Publish
+        # Same settings as the local FolderProfile (*.pubxml is gitignored): framework-dependent single file
+        run: dotnet publish source/WledSRServer/WledSRServer.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true -p:PublishReadyToRun=false -o publish
+
+      - name: Upload build
+        uses: actions/upload-artifact@v7
+        with:
+          name: WledSRServer-${{ github.sha }}
+          path: publish/
+          retention-days: 14

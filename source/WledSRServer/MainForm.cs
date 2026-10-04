@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using WledSRServer.Audio;
 using WledSRServer.Audio.AudioProcessor.FFTBuckets;
@@ -86,8 +87,13 @@ namespace WledSRServer
             txtLocalIpAddress.AutoCompleteCustomSource.AddRange(NetworkManager.GetLocalIPAddresses());
             txtLocalIpAddress.AutoCompleteMode = AutoCompleteMode.Suggest;
             txtLocalIpAddress.AutoCompleteSource = AutoCompleteSource.CustomSource;
-            txtLocalIpAddress.Text = settings.LocalIPToBind;
+            txtLocalIpAddress.Text = IPAddress.TryParse(settings.LocalIPToBind, out _) ? settings.LocalIPToBind : "";
             txtLocalIpAddress.TextChanged += txtLocalIpAddress_Changed;
+
+            RefreshLocalNetworkList();
+            cbLocalNetwork.DropDown += (s, e) => RefreshLocalNetworkList(); // networks may come and go
+            cbLocalNetwork.SelectedIndexChanged += cbLocalNetwork_Changed;
+            NetworkChange.NetworkAddressChanged += NetworkAddressChanged;
 
             txtFFTLower.Text = settings.FFTLow.ToString();
             txtFFTLower.TextChanged += txtFFTLower_TextChanged;
@@ -178,6 +184,7 @@ namespace WledSRServer
 
         internal void ShowSettings(bool showAdvancedNetworkSettings = false)
         {
+            RefreshLocalNetworkList();
             txtLocalIpAddress_Changed(null, null); //re-check
             pnlSettings.Visible = true;
             if (showAdvancedNetworkSettings) pnlSettings.Visible = true;
@@ -192,6 +199,7 @@ namespace WledSRServer
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            NetworkChange.NetworkAddressChanged -= NetworkAddressChanged; // static event: don't keep the closed form alive
             base.OnFormClosed(e);
             Program.GuiContext.FormClosed(e.CloseReason);
         }
@@ -237,30 +245,154 @@ namespace WledSRServer
             NetworkManager.ReStart();
         }
 
-        private void txtLocalIpAddress_Changed(object? sender, EventArgs e)
+        // Value: the LocalIPToBind setting value, null for the "Custom IP address" item
+        private record LocalNetworkItem(string Text, string? Value)
         {
-            var newIpAddress = txtLocalIpAddress.Text;
-            if (!string.IsNullOrEmpty(newIpAddress))
+            public override string ToString() => Text;
+        }
+
+        private bool _updatingLocalNetworkList = false;
+
+        private bool IsCustomLocalIPSelected
+            => cbLocalNetwork.SelectedItem is LocalNetworkItem { Value: null };
+
+        private void RefreshLocalNetworkList()
+        {
+            var setting = Properties.Settings.Default.LocalIPToBind;
+            var interfaces = NetworkManager.GetLocalInterfaces();
+            var autoAddress = NetworkManager.GetAutoLocalIPAddress();
+            var autoInterface = interfaces.FirstOrDefault(i => autoAddress != null && autoAddress.Equals(i.Address));
+
+            // Names only, the IP address used is shown in the box next to the dropdown
+            var items = new List<LocalNetworkItem>
             {
-                if (!IPAddress.TryParse(newIpAddress, out var newAddress))
-                {
-                    txtLocalIpAddress.BackColor = Color.Salmon;
-                    SetToolTip(txtLocalIpAddress, "Not valid IP address.");
-                    return;
-                }
-                if (!NetworkManager.TestLocalIP(newAddress, out var errorMessage))
-                {
-                    txtLocalIpAddress.BackColor = Color.Salmon;
-                    var err = "There is a problem with this IP address.";
-                    if (!string.IsNullOrEmpty(errorMessage)) err += $"\nError: {errorMessage}";
-                    SetToolTip(txtLocalIpAddress, err);
-                    return;
-                }
+                new(autoInterface != null ? $"Automatic ({autoInterface.Name})" : "Automatic", "")
+            };
+            items.AddRange(interfaces.Where(i => i.Address != null)
+                                     .Select(i => new LocalNetworkItem(i.Name, NetworkManager.InterfacePrefix + i.Id)));
+
+            // The selected network is not connected right now: keep it in the list (sending falls back to automatic)
+            var selectedInterfaceId = NetworkManager.GetInterfaceIdFromSetting(setting);
+            if (selectedInterfaceId != null && !items.Any(it => it.Value == setting))
+            {
+                var name = interfaces.FirstOrDefault(i => i.Id == selectedInterfaceId)?.Name ?? "Selected network";
+                items.Add(new($"{name} (not connected)", setting));
+            }
+
+            items.Add(new("Custom IP address…", null));
+
+            // Keep "Custom IP address" selected while the user is still typing (the setting is only saved for a valid IP)
+            var index = IsCustomLocalIPSelected ? items.Count - 1 : items.FindIndex(it => it.Value == setting);
+            if (index < 0) index = items.Count - 1; // manually entered IP address
+
+            _updatingLocalNetworkList = true;
+            try
+            {
+                cbLocalNetwork.Items.Clear();
+                cbLocalNetwork.Items.AddRange(items.ToArray());
+                cbLocalNetwork.SelectedIndex = index;
+            }
+            finally
+            {
+                _updatingLocalNetworkList = false;
+            }
+            UpdateLocalIPBox();
+        }
+
+        // The IP box is only editable for "Custom IP address", otherwise it shows the address the selected network uses.
+        // ReadOnly instead of disabled: a disabled control shows no tooltip.
+        private void UpdateLocalIPBox()
+        {
+            var custom = IsCustomLocalIPSelected;
+            txtLocalIpAddress.ReadOnly = !custom;
+            txtLocalIpAddress.TabStop = custom;
+            if (custom) return; // keep what the user typed (validated in txtLocalIpAddress_Changed)
+
+            txtLocalIpAddress.Text = NetworkManager.GetLocalIPToBind()?.ToString() ?? "";
+            txtLocalIpAddress.BackColor = SystemColors.Control;
+            SetToolTip(txtLocalIpAddress, DescribeLocalIPSource());
+        }
+
+        // Tooltip for the read-only IP box: where the address comes from
+        private static string DescribeLocalIPSource()
+        {
+            var interfaces = NetworkManager.GetLocalInterfaces();
+            var autoAddress = NetworkManager.GetAutoLocalIPAddress();
+            var autoName = interfaces.FirstOrDefault(i => autoAddress != null && autoAddress.Equals(i.Address))?.Name;
+
+            var interfaceId = NetworkManager.GetInterfaceIdFromSetting(Properties.Settings.Default.LocalIPToBind);
+            if (interfaceId == null)
+                return autoName != null
+                    ? $"Picked automatically: the IP address of {autoName} (the network with a router)."
+                    : "No suitable network found.";
+
+            var selected = interfaces.FirstOrDefault(i => i.Id == interfaceId);
+            if (selected?.Address != null)
+                return $"The IP address of {selected.Name}.";
+
+            var selectedName = selected?.Name ?? "The selected network";
+            return autoName != null
+                ? $"{selectedName} is not connected. Until it is, the automatically picked network ({autoName}) is used."
+                : $"{selectedName} is not connected, and no other suitable network was found.";
+        }
+
+        private void cbLocalNetwork_Changed(object? sender, EventArgs e)
+        {
+            if (_updatingLocalNetworkList) return;
+
+            if (cbLocalNetwork.SelectedItem is not LocalNetworkItem item) return;
+            if (item.Value == null)
+            {
+                // Custom: start from the address used so far
+                UpdateLocalIPBox();
+                txtLocalIpAddress.Focus();
+                txtLocalIpAddress_Changed(null, null);
+                return;
+            }
+            SaveLocalIPSetting(item.Value);
+            UpdateLocalIPBox();
+        }
+
+        private void NetworkAddressChanged(object? sender, EventArgs e)
+        {
+            // Raised on a background thread; the automatic selection (and so the "Automatic (...)" text and the IP) may change
+            if (!IsHandleCreated || IsDisposed) return;
+            BeginInvoke(() =>
+            {
+                if (IsDisposed || cbLocalNetwork.DroppedDown) return; // don't change the list under the user
+                RefreshLocalNetworkList();
+            });
+        }
+
+        private void txtLocalIpAddress_Changed(object? sender, EventArgs? e)
+        {
+            if (!IsCustomLocalIPSelected) return;
+
+            var newIpAddress = txtLocalIpAddress.Text;
+            if (!IPAddress.TryParse(newIpAddress, out var newAddress))
+            {
+                txtLocalIpAddress.BackColor = Color.Salmon;
+                SetToolTip(txtLocalIpAddress, string.IsNullOrEmpty(newIpAddress) ? "Enter the IP address of this computer." : "Not valid IP address.");
+                return;
+            }
+            if (!NetworkManager.TestLocalIP(newAddress, out var errorMessage))
+            {
+                txtLocalIpAddress.BackColor = Color.Salmon;
+                var err = "There is a problem with this IP address.";
+                if (!string.IsNullOrEmpty(errorMessage)) err += $"\nError: {errorMessage}";
+                SetToolTip(txtLocalIpAddress, err);
+                return;
             }
             SetToolTip(txtLocalIpAddress, null);
             txtLocalIpAddress.BackColor = Color.White;
 
-            Properties.Settings.Default.LocalIPToBind = newIpAddress;
+            SaveLocalIPSetting(newIpAddress);
+        }
+
+        private static void SaveLocalIPSetting(string value)
+        {
+            if (Properties.Settings.Default.LocalIPToBind == value) return;
+            Properties.Settings.Default.LocalIPToBind = value;
             Properties.Settings.Default.Save();
             NetworkManager.ReStart();
         }

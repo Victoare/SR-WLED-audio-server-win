@@ -20,13 +20,7 @@ namespace WledSRServer.Audio
 
         public WaveFormat WaveFormat => _capture.WaveFormat;
 
-        public CaptureState CaptureState => _capture.CaptureState switch
-        {
-            NAudioCoreAudio.CaptureState.Starting => CaptureState.Starting,
-            NAudioCoreAudio.CaptureState.Capturing => CaptureState.Capturing,
-            NAudioCoreAudio.CaptureState.Stopping => CaptureState.Stopping,
-            _ => CaptureState.Stopped,
-        };
+        public CaptureState CaptureState => _capture.CaptureState;
 
         public event EventHandler<WaveInEventArgs>? DataAvailable;
         public event EventHandler<StoppedEventArgs>? RecordingStopped;

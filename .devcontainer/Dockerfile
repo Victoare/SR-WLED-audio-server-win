@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0
+FROM mcr.microsoft.com/dotnet/sdk:10.0
 
 # pulseaudio-utils provides `parec`/`pactl`, used to prototype loopback
 # capture against the host's PulseAudio/PipeWire-pulse socket.

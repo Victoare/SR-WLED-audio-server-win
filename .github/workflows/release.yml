@@ -1,0 +1,70 @@
+# Creates a draft GitHub release for the version set in WledSRServer.csproj.
+# Review the notes on GitHub, then publish the draft (publishing creates the tag).
+
+name: Draft a release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content source/WledSRServer/WledSRServer.csproj
+          $version = @($project.Project.PropertyGroup.Version | Where-Object { $_ })[0]
+          if (-not $version) { throw "No <Version> found in WledSRServer.csproj" }
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $version"
+
+      - name: Check that the version is not released yet
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          if (git ls-remote --tags origin "refs/tags/$tag") { throw "Tag $tag already exists - bump <Version> in WledSRServer.csproj" }
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) { throw "A release (or draft) for $tag already exists" }
+          exit 0
+
+      - name: Publish
+        # Same settings as the local FolderProfile (*.pubxml is gitignored): framework-dependent single file
+        run: dotnet publish source/WledSRServer/WledSRServer.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true -p:PublishReadyToRun=false -o publish
+
+      - name: Check publish output
+        shell: pwsh
+        run: |
+          # Guard against an accidental self-contained build (runtime bundled into the exe)
+          $exe = Get-Item publish/WledSRServer.exe
+          if ($exe.Length -gt 10MB) { throw "WledSRServer.exe is $([math]::Round($exe.Length / 1MB)) MB - self-contained build?" }
+          Get-ChildItem publish | Format-Table Name, Length
+
+      - name: Create zip
+        shell: pwsh
+        run: Compress-Archive -Path publish/* -DestinationPath "WledSRServer-${{ steps.version.outputs.tag }}.zip"
+
+      - name: Create draft release
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          gh release create $tag "WledSRServer-$tag.zip" --draft --target $env:GITHUB_SHA --title $tag --generate-notes

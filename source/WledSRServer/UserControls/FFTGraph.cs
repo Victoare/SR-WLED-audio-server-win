@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.ComponentModel;
+using System.Data;
 using WledSRServer.Audio;
 using WledSRServer.Audio.AudioProcessor.FFT;
 using WledSRServer.Audio.AudioProcessor.FFTBuckets;
@@ -7,8 +8,11 @@ namespace WledSRServer.UserControls
 {
     public partial class FFTGraph : UserControl
     {
+        [DefaultValue(10.0)]
         public double MinFreq { get; set; } = 10;
+        [DefaultValue(1000.0)]
         public double MaxFreq { get; set; } = 1000;
+        [DefaultValue(true)]
         public bool BeatFlash { get; set; } = true;
 
         public FFTGraph()

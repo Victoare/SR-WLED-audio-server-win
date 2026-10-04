@@ -38,6 +38,8 @@ namespace WledSRServer
         {
             var localIpSetting = Properties.Settings.Default.LocalIPToBind;
             if (string.IsNullOrEmpty(localIpSetting)) return true;
+            // A not connected interface falls back to the automatic selection, that's not an error
+            if (NetworkManager.GetInterfaceIdFromSetting(localIpSetting) != null) return true;
             if (IPAddress.TryParse(localIpSetting, out var localIp) && NetworkManager.TestLocalIP(localIp, out var _)) return true;
             return false;
         }

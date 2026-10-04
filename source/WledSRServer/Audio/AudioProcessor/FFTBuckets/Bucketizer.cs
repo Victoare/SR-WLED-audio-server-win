@@ -38,7 +38,7 @@ namespace WledSRServer.Audio.AudioProcessor.FFTBuckets
         private static double[] GetFreqBands(int freqMin, int freqMax, bool logFreqScale, int count)
         {
             if (logFreqScale)
-                return Enumerable.Range(0, count + 1).Select(i => freqMin * Math.Pow(freqMax / freqMin, (double)i / count)).ToArray();
+                return Enumerable.Range(0, count + 1).Select(i => freqMin * Math.Pow((double)freqMax / freqMin, (double)i / count)).ToArray();
             else
                 return Enumerable.Range(0, count + 1).Select(i => freqMin + (freqMax - freqMin) / (double)count * i).ToArray();
         }

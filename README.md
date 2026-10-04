@@ -23,7 +23,7 @@ By default, the main form will open when the app starts.
 
 <div align="center" >
 
-![Main form](assets/Screenshots/Screenshot_7.png)
+![Main form](assets/Screenshots/Screenshot_8.png)
 
 </div>
 
@@ -60,7 +60,7 @@ If you fancied, you can click on the **Gain** button to access a bit more granua
 
 **SR Port** is the same port you have set in your WLED configuration page. By default, this is 11988.
 
-If the bars are jumping, the *Packet per second* shows a nonzero value, WLED is properly configured but still not reacting to your audio then click on "**advanced network**" and try to set the **Local IP** to the IP your machine has in the network. If you start to type, it will autosuggest IPs it found on the network adapters and will show an error if the address is invalid, unusable, or malformed.
+If the bars are jumping, the *Packet per second* shows a nonzero value, WLED is properly configured but still not reacting to your audio then click on "**Advanced network**" and check the **Local network**. By default it is *Automatic* and it shows which network the app picked. If it is the wrong one (for example a VPN or a virtual machine network), just select the right one from the list.
 
 Also there is a bit more configuraion for the tech savy people you can check in the Network-Advanced section.
 
@@ -77,7 +77,7 @@ That's all folks, I hope it will run smoothly :)
 ## "Install" / update
 
 To install, download the latest version from [releases](https://github.com/Victoare/SR-WLED-audio-server-win/releases/latest) (WledSRServer.zip) and put it somewhere on your machine. 
-The app is a portable one, without any fancy installer, but it needs .NET 8.0 runtime. If you don't have the runtime already installed, then you will be prompted to do so (giving you the link to the .NET installer) at the start.
+The app is a portable one, without any fancy installer, but it needs the .NET 10 Desktop Runtime (older versions up to v1.3.2 used .NET 8). If you don't have the runtime already installed, then you will be prompted to do so (giving you the link to the .NET installer) at the start.
 
 To update, just download the next version, stop the server if running, and overwrite the old one with the new.
 
@@ -105,6 +105,15 @@ However, if you fancy (and know what are you doing), you can limit these package
 - **Target IP List** is for when you want to direcly target WLED instance(s). Only they will receive the packages.
 
 Where list can be applied, the addresses can be separated by anything other than numbers or dot. (space, coma, colon, whatever)
+
+### Local network
+
+The packages go out on one network adapter of your machine. With **Automatic** the app picks the one that has a gateway (router), which is usually your real LAN (Ethernet or Wi-Fi). Most VPNs (like Tailscale) and virtual adapters (VirtualBox, Hyper-V, WSL, Docker) are skipped this way.
+The IP address in use is shown next to the list (hover over it to see why that one).
+- If you **select a network** from the list, the app remembers that adapter, so it keeps working even if its IP address changes. If it is not connected, the app falls back to automatic until it comes back.
+- With **Custom IP address…** you can type the IP address of your machine by hand. It will show an error if the address is invalid or unusable.
+
+If you had set a Local IP in an older version, it is switched to the matching network automatically.
 
 ### Connection issues
 
