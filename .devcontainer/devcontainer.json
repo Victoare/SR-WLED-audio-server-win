@@ -4,9 +4,9 @@
     "dockerfile": "Dockerfile"
   },
   "mounts": [
-    "source=${localEnv:XDG_RUNTIME_DIR}/pulse,target=/run/user/1000/pulse,type=bind"
+    "source=${localEnv:XDG_RUNTIME_DIR}/pulse,target=/run/pulse-host,type=bind"
   ],
   "containerEnv": {
-    "PULSE_SERVER": "unix:/run/user/1000/pulse/native"
+    "PULSE_SERVER": "unix:/run/pulse-host/native"
   }
 }

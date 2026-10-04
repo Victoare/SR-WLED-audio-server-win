@@ -29,8 +29,8 @@ docker build -t wled-sr-proto -f .devcontainer/Dockerfile .
 
 docker run --rm --network host \
   -v "$(pwd)/source:/workspace/source" \
-  -v "${XDG_RUNTIME_DIR}/pulse:/run/user/1000/pulse" \
-  -e PULSE_SERVER=unix:/run/user/1000/pulse/native \
+  -v "${XDG_RUNTIME_DIR}/pulse:/run/pulse-host" \
+  -e PULSE_SERVER=unix:/run/pulse-host/native \
   -w /workspace/source/WledSRServer.Cli \
   wled-sr-proto \
   dotnet run -c Release -- --target-ip=192.168.1.50
@@ -43,10 +43,10 @@ docker run --rm --network host \
   because WLED devices are only reachable if the container shares the host's network
   (the default Docker bridge network won't route broadcast/multicast/UDP to your LAN).
 - Alternatively, open this repo in VS Code and use "Reopen in Container" - the mount and
-  `PULSE_SERVER` env var are already set up in `.devcontainer/devcontainer.json` (edit it
-  if your runtime UID isn't 1000).
+  `PULSE_SERVER` env var are already set up in `.devcontainer/devcontainer.json`.
+  The socket is mounted at a fixed path, so it doesn't depend on your UID.
 
-### With a local .NET 8 SDK
+### With a local .NET 10 SDK
 
 ```bash
 dotnet run --project source/WledSRServer.Cli -- --target-ip=192.168.1.50
@@ -60,8 +60,9 @@ between runs; each invocation starts fresh plus whatever flags you pass.
 
 | Option | Effect |
 |---|---|
+| `--help` / `-h` | Prints the option list and exits. |
 | `--list-devices` | Lists outputs that can be tapped (see below), then exits without capturing. |
-| `--device=<id>` | Which output's monitor to capture. Omit for the default output (`@DEFAULT_MONITOR@`, tracks whatever the system default is). Use an id from `--list-devices` to pin a specific output. |
+| `--device=<id>` | Which output's monitor to capture. Omit for the default output (`@DEFAULT_MONITOR@`, follows the system default, picked up when capture restarts). Use an id from `--list-devices` to pin a specific output. |
 | `--target-ip=<ip[,ip...]>` | Send packets directly to these IP(s) instead of broadcasting. |
 | `--broadcast-ip=<ip[,ip...]>` | Send packets to these broadcast address(es) (subnet broadcast mode). |
 | `--udp-port=<port>` | UDP port (must match the WLED module's configured SR port; default 11988). |
@@ -77,7 +78,7 @@ Press Ctrl+C to stop; it shuts down the capture and network threads cleanly.
 ```
 $ dotnet run --project source/WledSRServer.Cli -- --list-devices
 Available audio devices (use with --device=<id>):
-  (default)                                                    Loopback (system output, tracks the default)
+  (default)                                                    Loopback (system output, follows the default on capture restart)
   alsa_output.pci-0000_00_1f.3.analog-stereo.monitor            Monitor of Built-in Audio Analog Stereo
   alsa_output.usb-Some_USB_DAC.analog-stereo.monitor             Monitor of Some USB DAC
 ```

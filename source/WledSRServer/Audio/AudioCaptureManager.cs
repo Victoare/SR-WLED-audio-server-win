@@ -80,7 +80,7 @@ namespace WledSRServer.Audio
             return sources
                 .Where(s => s.Name.EndsWith(".monitor", StringComparison.Ordinal))
                 .Select(s => new SimpleDeviceDescriptor(s.Name, string.IsNullOrEmpty(s.Description) ? s.Name : s.Description))
-                .Prepend(new SimpleDeviceDescriptor("", "Loopback (system output, tracks the default)"))
+                .Prepend(new SimpleDeviceDescriptor("", "Loopback (system output, follows the default on capture restart)"))
                 .ToArray();
         }
 
@@ -157,6 +157,8 @@ namespace WledSRServer.Audio
                     continue;
                 }
                 _captureStopped.Wait(); // wait capturing to stop
+                if (_autoRestartCapture && Program.ServerContext.AudioCaptureStatus == AudioCaptureStatus.Error)
+                    Thread.Sleep(1000); // capture died on its own: back off instead of respawning in a tight loop
             }
 
 #if WINDOWS

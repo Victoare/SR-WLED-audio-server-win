@@ -10,6 +10,12 @@ internal class Program
 
     private static void Main(string[] args)
     {
+        if (args.Contains("--help") || args.Contains("-h"))
+        {
+            PrintUsage();
+            return;
+        }
+
         if (args.Contains("--list-devices"))
         {
             ListDevices();
@@ -37,9 +43,9 @@ internal class Program
                     Settings.Default.NetworkBroadcastIPList = value;
                     Settings.Default.NetworkSendMode = (int)NetworkManager.SendMode.BroadcastSubNet;
                     break;
-                case "udp-port": Settings.Default.WledUdpMulticastPort = int.Parse(value); break;
-                case "fft-low": Settings.Default.FFTLow = int.Parse(value); break;
-                case "fft-high": Settings.Default.FFTHigh = int.Parse(value); break;
+                case "udp-port": if (TryParseInt(key, value, out var udpPort)) Settings.Default.WledUdpMulticastPort = udpPort; break;
+                case "fft-low": if (TryParseInt(key, value, out var fftLow)) Settings.Default.FFTLow = fftLow; break;
+                case "fft-high": if (TryParseInt(key, value, out var fftHigh)) Settings.Default.FFTHigh = fftHigh; break;
                 default: Console.Error.WriteLine($"Unknown option: --{key}"); break;
             }
         }
@@ -66,6 +72,28 @@ internal class Program
         AudioCaptureManager.PacketUpdated -= OnPacketUpdated;
         AudioCaptureManager.Stop();
         NetworkManager.Stop();
+    }
+
+    private static bool TryParseInt(string key, string value, out int result)
+    {
+        if (int.TryParse(value, out result))
+            return true;
+        Console.Error.WriteLine($"Ignoring --{key}={value}: expected a whole number");
+        return false;
+    }
+
+    private static void PrintUsage()
+    {
+        Console.WriteLine("Usage: wled-sr-server-cli [--key=value ...]");
+        Console.WriteLine();
+        Console.WriteLine("  --list-devices         List capturable audio devices and exit");
+        Console.WriteLine("  --device=<id>          Audio device (default: the default output's monitor)");
+        Console.WriteLine("  --target-ip=<list>     Send to these IPs (target IP list mode)");
+        Console.WriteLine("  --broadcast-ip=<list>  Send to these subnet broadcast addresses");
+        Console.WriteLine("  --udp-port=<n>         UDP port (default from settings, 11988)");
+        Console.WriteLine("  --fft-low=<hz>         Lowest FFT frequency");
+        Console.WriteLine("  --fft-high=<hz>        Highest FFT frequency");
+        Console.WriteLine("  --help, -h             Show this help");
     }
 
     private static void ListDevices()

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using NAudio.Wave;
 
 namespace WledSRServer.Audio
@@ -11,7 +12,13 @@ namespace WledSRServer.Audio
     internal sealed class ParecLoopbackCapture : IAudioCapture
     {
         public WaveFormat WaveFormat { get; }
-        public CaptureState CaptureState { get; private set; } = CaptureState.Stopped;
+        // Written by the read thread, polled by AudioCaptureManager while stopping.
+        private volatile CaptureState _captureState = CaptureState.Stopped;
+        public CaptureState CaptureState
+        {
+            get => _captureState;
+            private set => _captureState = value;
+        }
 
         public event EventHandler<WaveInEventArgs>? DataAvailable;
         public event EventHandler<StoppedEventArgs>? RecordingStopped;
@@ -20,6 +27,7 @@ namespace WledSRServer.Audio
         private Process? _process;
         private Thread? _readThread;
         private volatile bool _stopRequested;
+        private readonly StringBuilder _stderr = new();
 
         /// <param name="device">A pactl source name, or the "@DEFAULT_MONITOR@" alias for
         /// whatever the default sink's monitor currently is.</param>
@@ -52,10 +60,17 @@ namespace WledSRServer.Audio
             psi.ArgumentList.Add($"--device={_device}");
 
             _process = new Process { StartInfo = psi };
+            lock (_stderr) _stderr.Clear();
+            _process.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    lock (_stderr) _stderr.AppendLine(e.Data);
+            };
 
             try
             {
                 _process.Start();
+                _process.BeginErrorReadLine();
             }
             catch (Exception ex)
             {
@@ -100,8 +115,13 @@ namespace WledSRServer.Audio
             {
                 var stdout = _process!.StandardOutput.BaseStream;
                 int bytesRead;
-                while (!_stopRequested && (bytesRead = stdout.Read(buffer, 0, buffer.Length)) > 0)
+                // A pipe read can return any number of bytes; ReadAtLeast fills the (frame-aligned)
+                // buffer so downstream never sees a chunk that starts or ends mid-frame.
+                while (!_stopRequested && (bytesRead = stdout.ReadAtLeast(buffer, buffer.Length, throwOnEndOfStream: false)) > 0)
                     DataAvailable?.Invoke(this, new WaveInEventArgs(buffer, bytesRead));
+
+                if (!_stopRequested)
+                    error = new InvalidOperationException(DescribeUnexpectedExit());
             }
             catch (Exception ex) when (!_stopRequested)
             {
@@ -117,6 +137,26 @@ namespace WledSRServer.Audio
                 CaptureState = CaptureState.Stopped;
                 RecordingStopped?.Invoke(this, new StoppedEventArgs(error));
             }
+        }
+
+        // parec ended by itself (bad --device, no pulse server, ...): surface its exit code and
+        // stderr so the manager reports Error and retries with its usual back-off.
+        private string DescribeUnexpectedExit()
+        {
+            var exitCode = "unknown";
+            try
+            {
+                if (_process!.WaitForExit(2000))
+                {
+                    _process.WaitForExit(); // flush the async stderr handler
+                    exitCode = _process.ExitCode.ToString();
+                }
+            }
+            catch { /* ignore */ }
+
+            string stderr;
+            lock (_stderr) stderr = _stderr.ToString().Trim();
+            return $"parec exited unexpectedly (exit code {exitCode})" + (stderr.Length > 0 ? $": {stderr}" : "");
         }
 
         public void Dispose()
