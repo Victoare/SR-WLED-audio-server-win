@@ -1,4 +1,5 @@
-﻿using System.Configuration;
+﻿using Microsoft.Win32;
+using System.Configuration;
 using System.Reflection;
 using WledSRServer;
 using WledSRServer.Audio;
@@ -53,6 +54,9 @@ internal class Program
 
                 AudioCaptureManager.Run();
                 NetworkManager.Run();
+
+                SystemEvents.PowerModeChanged += OnPowerModeChanged;
+                SystemEvents.SessionEnded += OnSessionEnded;
             }
 
             Application.EnableVisualStyles();
@@ -64,10 +68,27 @@ internal class Program
 
             if (!IsInDesigner)
             {
+                SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+                SystemEvents.SessionEnded -= OnSessionEnded;
+
                 AudioCaptureManager.Stop();
                 NetworkManager.Stop();
             }
         }
+    }
+
+    // Leave the WLED devices silent instead of showing the last sound while the PC sleeps or is off
+    private static void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode == PowerModes.Suspend)
+            NetworkManager.SendSilenceAndMute();
+        else if (e.Mode == PowerModes.Resume)
+            NetworkManager.Unmute();
+    }
+
+    private static void OnSessionEnded(object sender, SessionEndedEventArgs e)
+    {
+        NetworkManager.SendSilenceAndMute();
     }
 
     public static void LogException(Exception ex)

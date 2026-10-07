@@ -17,6 +17,11 @@ namespace WledSRServer
         private volatile static AutoResetEvent _restartNetworkClient = new(false);
         private static List<IPEndPoint> endpoints = new();
         private static readonly object _sendLock = new();
+        private volatile static bool _muted = false;
+        private volatile static Action? _sendSilencePacket;
+
+        private const int SilencePacketCount = 3;
+        private const int SilencePacketIntervalMs = 20;
 
         public static string NetworkError = "";
 
@@ -47,8 +52,31 @@ namespace WledSRServer
             _restartNetworkClient.Set();
         }
 
+        /// <summary>
+        /// Sends a few silent packets, then stops sending until <see cref="Unmute"/>.
+        /// Without this, WLED keeps showing the last sound when the sending stops (shutdown, sleep, exit).
+        /// </summary>
+        public static void SendSilenceAndMute()
+        {
+            _muted = true;
+            // A few times, as a single UDP packet can get lost
+            for (var i = 0; i < SilencePacketCount; i++)
+            {
+                if (i > 0)
+                    Thread.Sleep(SilencePacketIntervalMs);
+                _sendSilencePacket?.Invoke();
+            }
+        }
+
+        public static void Unmute()
+        {
+            _muted = false;
+        }
+
         public static void Stop()
         {
+            SendSilenceAndMute();
+
             _keepThreadRunning = false;
             _restartNetworkClient.Set();
 
@@ -284,13 +312,19 @@ namespace WledSRServer
                         #endregion
 
                         var swPackageTiming = Stopwatch.StartNew();
-                        var sendPacket = new Action(() =>
+                        var send = new Action<bool>((silence) =>
                         {
-                            // Called from both the audio thread and the auto packet timer
+                            // Called from the audio thread, the auto packet timer and SendSilenceAndMute
                             lock (_sendLock)
                             {
+                                if (_muted && !silence)
+                                    return;
+
                                 try
                                 {
+                                    if (silence)
+                                        Program.ServerContext.Packet.SetToZero(); // FrameCounter = 0 too, like the silence detection does
+
                                     Program.ServerContext.Packet.FrameCounter++;
 
                                     var packetBytes = Program.ServerContext.Packet.AsByteArray();
@@ -312,6 +346,8 @@ namespace WledSRServer
                                 }
                             }
                         });
+                        var sendPacket = new Action(() => send(false));
+                        _sendSilencePacket = () => send(true);
 
                         // Send packets even without audio
                         var autoPacketTimer = new System.Threading.Timer(new TimerCallback((_) =>
@@ -326,6 +362,7 @@ namespace WledSRServer
 
                         _restartNetworkClient.WaitOne();
 
+                        _sendSilencePacket = null;
                         AudioCaptureManager.PacketUpdated -= sendPacketHandler;
                         autoPacketTimer?.Dispose();
 
