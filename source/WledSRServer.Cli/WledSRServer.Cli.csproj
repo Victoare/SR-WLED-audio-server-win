@@ -11,7 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="FftSharp" Version="2.2.0" />
-    <PackageReference Include="NAudio" Version="3.1.0" />
+    <!-- Only the platform-agnostic core (WaveFormat, CaptureState); WASAPI lives in the Windows-only NAudio.Wasapi -->
+    <PackageReference Include="NAudio.Core" Version="3.1.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.0" />
   </ItemGroup>
 

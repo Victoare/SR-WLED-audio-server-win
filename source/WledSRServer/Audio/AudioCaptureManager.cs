@@ -60,9 +60,14 @@ namespace WledSRServer.Audio
         // are listed here; real capture sources (mics, line-in ADCs, etc.) are excluded.
         private static SimpleDeviceDescriptor[] GetDevicesLinux()
         {
+            const string notInstalled = "Failed to start 'pactl'. Is pulseaudio-utils (or pipewire-pulse) installed?";
+            // JSON output (-f json) needs pactl from PulseAudio 16+ (or PipeWire's pipewire-pulse)
+            const string tooOld = "'pactl' gave no usable device list. JSON output needs PulseAudio 16 or newer (or pipewire-pulse).";
+
             var psi = new ProcessStartInfo("pactl")
             {
                 RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 UseShellExecute = false,
             };
             psi.ArgumentList.Add("-f");
@@ -70,12 +75,47 @@ namespace WledSRServer.Audio
             psi.ArgumentList.Add("list");
             psi.ArgumentList.Add("sources");
 
-            using var process = Process.Start(psi)
-                ?? throw new InvalidOperationException("Failed to start 'pactl'. Is pulseaudio-utils (or pipewire-pulse) installed?");
-            var json = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
+            Process? process;
+            try
+            {
+                process = Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(notInstalled, ex);
+            }
 
-            var sources = JsonSerializer.Deserialize<List<PactlSource>>(json) ?? new List<PactlSource>();
+            using (process ?? throw new InvalidOperationException(notInstalled))
+            {
+                var stderrTask = process.StandardError.ReadToEndAsync();
+                var json = process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+                var stderr = stderrTask.Result.Trim();
+
+                if (process.ExitCode != 0)
+                    throw new InvalidOperationException(
+                        $"'pactl' failed (exit code {process.ExitCode}){(stderr.Length > 0 ? $": {stderr}" : "")}. "
+                        + "Is the sound server running? JSON output also needs PulseAudio 16 or newer (or pipewire-pulse).");
+
+                if (string.IsNullOrWhiteSpace(json))
+                    throw new InvalidOperationException(tooOld);
+
+                List<PactlSource>? sources;
+                try
+                {
+                    sources = JsonSerializer.Deserialize<List<PactlSource>>(json);
+                }
+                catch (JsonException ex)
+                {
+                    throw new InvalidOperationException(tooOld, ex);
+                }
+
+                return BuildLinuxDeviceList(sources ?? new List<PactlSource>());
+            }
+        }
+
+        private static SimpleDeviceDescriptor[] BuildLinuxDeviceList(List<PactlSource> sources)
+        {
 
             return sources
                 .Where(s => s.Name.EndsWith(".monitor", StringComparison.Ordinal))
