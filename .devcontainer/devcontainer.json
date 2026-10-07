@@ -1,0 +1,12 @@
+{
+  "name": "wled-sr-server (linux audio prototype)",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "mounts": [
+    "source=${localEnv:XDG_RUNTIME_DIR}/pulse,target=/run/pulse-host,type=bind"
+  ],
+  "containerEnv": {
+    "PULSE_SERVER": "unix:/run/pulse-host/native"
+  }
+}

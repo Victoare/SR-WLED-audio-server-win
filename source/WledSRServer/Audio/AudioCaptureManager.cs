@@ -1,7 +1,11 @@
-﻿using NAudio.CoreAudioApi;
+﻿#if WINDOWS
+using NAudio.CoreAudioApi;
+#endif
 using NAudio.Wave;
 using System.Data;
 using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using WledSRServer.Audio.AudioProcessor;
 using WledSRServer.Audio.AudioProcessor.FFT;
 using WledSRServer.Audio.AudioProcessor.FFTBuckets;
@@ -19,11 +23,65 @@ namespace WledSRServer.Audio
 
         public static SimpleDeviceDescriptor[] GetDevices()
         {
+#if WINDOWS
+            if (OperatingSystem.IsWindows())
+                return GetDevicesWindows();
+#endif
+
+            if (OperatingSystem.IsLinux())
+                return GetDevicesLinux();
+
+            throw new PlatformNotSupportedException($"Audio device enumeration is not supported on {Environment.OSVersion.Platform}.");
+        }
+
+#if WINDOWS
+        private static SimpleDeviceDescriptor[] GetDevicesWindows()
+        {
             var mmde = new MMDeviceEnumerator();
             var endpoints = mmde.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
             return endpoints.Select(d => new SimpleDeviceDescriptor(d.ID, d.FriendlyName))
                             .Prepend(new SimpleDeviceDescriptor("", "Loopback (system output)"))
                             .ToArray();
+        }
+#endif
+
+        private sealed class PactlSource
+        {
+            [JsonPropertyName("name")]
+            public string Name { get; set; } = "";
+
+            [JsonPropertyName("description")]
+            public string? Description { get; set; }
+        }
+
+        // This app only ever taps into an output (loopback of whatever this machine is
+        // playing), never a real input like a mic - that's WLED's job, on its own line-in.
+        // So only monitor sources (one per output/sink, capturable via `parec --device=`)
+        // are listed here; real capture sources (mics, line-in ADCs, etc.) are excluded.
+        private static SimpleDeviceDescriptor[] GetDevicesLinux()
+        {
+            var psi = new ProcessStartInfo("pactl")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add("-f");
+            psi.ArgumentList.Add("json");
+            psi.ArgumentList.Add("list");
+            psi.ArgumentList.Add("sources");
+
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException("Failed to start 'pactl'. Is pulseaudio-utils (or pipewire-pulse) installed?");
+            var json = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+
+            var sources = JsonSerializer.Deserialize<List<PactlSource>>(json) ?? new List<PactlSource>();
+
+            return sources
+                .Where(s => s.Name.EndsWith(".monitor", StringComparison.Ordinal))
+                .Select(s => new SimpleDeviceDescriptor(s.Name, string.IsNullOrEmpty(s.Description) ? s.Name : s.Description))
+                .Prepend(new SimpleDeviceDescriptor("", "Loopback (system output, follows the default on capture restart)"))
+                .ToArray();
         }
 
         #endregion
@@ -35,7 +93,7 @@ namespace WledSRServer.Audio
         public static event PacketUpdatedHandler? PacketUpdated;
 
         private static Thread? _managerThread;
-        private static WasapiCapture? _capture;
+        private static IAudioCapture? _capture;
         private static volatile bool _autoRestartCapture = false;
         private static ManualResetEventSlim _captureStopped = new(false);
 
@@ -69,18 +127,26 @@ namespace WledSRServer.Audio
 
         private static void RunThread()
         {
-            var audioDeviceEventWatcher = new AudioDeviceEventWatcher();
-            audioDeviceEventWatcher.DefaultDeviceChanged += (flow, role, defaultDeviceId) =>
+            // Only WASAPI gives us default-device-changed notifications today; on Linux,
+            // `parec --device=@DEFAULT_MONITOR@` is reconnected on each capture restart instead.
+#if WINDOWS
+            AudioDeviceEventWatcher? audioDeviceEventWatcher = null;
+            if (OperatingSystem.IsWindows())
             {
-                Debug.WriteLine($"ADEW: DefaultDeviceChanged ({flow}, {role})");
-                // Only the default render/multimedia device is captured (see WasapiLoopbackCaptureEx.GetDefaultLoopbackCaptureDevice)
-                if (flow != DataFlow.Render || role != Role.Multimedia)
-                    return;
-                if (string.IsNullOrEmpty(Properties.Settings.Default.AudioCaptureDeviceId))
+                audioDeviceEventWatcher = new AudioDeviceEventWatcher();
+                audioDeviceEventWatcher.DefaultDeviceChanged += (flow, role, defaultDeviceId) =>
                 {
-                    RestartCapture();
-                }
-            };
+                    Debug.WriteLine($"ADEW: DefaultDeviceChanged ({flow}, {role})");
+                    // Only the default render/multimedia device is captured (see WasapiLoopbackCaptureEx.GetDefaultLoopbackCaptureDevice)
+                    if (flow != DataFlow.Render || role != Role.Multimedia)
+                        return;
+                    if (string.IsNullOrEmpty(Properties.Settings.Default.AudioCaptureDeviceId))
+                    {
+                        RestartCapture();
+                    }
+                };
+            }
+#endif
 
             while (_autoRestartCapture)
             {
@@ -91,21 +157,39 @@ namespace WledSRServer.Audio
                     continue;
                 }
                 _captureStopped.Wait(); // wait capturing to stop
+                if (_autoRestartCapture && Program.ServerContext.AudioCaptureStatus == AudioCaptureStatus.Error)
+                    Thread.Sleep(1000); // capture died on its own: back off instead of respawning in a tight loop
             }
 
-            audioDeviceEventWatcher.Dispose();
+#if WINDOWS
+            audioDeviceEventWatcher?.Dispose();
+#endif
         }
 
-        private static WasapiCapture? SetupCaptureDevice()
+        private static IAudioCapture? SetupCaptureDevice()
         {
             try
             {
                 var deviceId = Properties.Settings.Default.AudioCaptureDeviceId;
-                var audioBufferMs = 10; // 25ms seems to be the minimum. Any lower will give the same timing of ~14ms -> (Default Windows timer resolution).
-                if (string.IsNullOrEmpty(deviceId))
-                    return new WasapiLoopbackCaptureEx(audioBufferMillisecondsLength: audioBufferMs);
-                else
-                    return new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId), false, audioBufferMs);
+
+#if WINDOWS
+                if (OperatingSystem.IsWindows())
+                {
+                    var audioBufferMs = 10; // 25ms seems to be the minimum. Any lower will give the same timing of ~14ms -> (Default Windows timer resolution).
+                    if (string.IsNullOrEmpty(deviceId))
+                        return new WasapiAudioCapture(new WasapiLoopbackCaptureEx(audioBufferMillisecondsLength: audioBufferMs));
+                    else
+                        return new WasapiAudioCapture(new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId), false, audioBufferMs));
+                }
+#endif
+
+                if (OperatingSystem.IsLinux())
+                {
+                    var device = string.IsNullOrEmpty(deviceId) ? "@DEFAULT_MONITOR@" : deviceId;
+                    return new ParecLoopbackCapture(device);
+                }
+
+                throw new PlatformNotSupportedException($"Audio capture is not supported on {Environment.OSVersion.Platform}.");
             }
             catch (Exception ex)
             {
