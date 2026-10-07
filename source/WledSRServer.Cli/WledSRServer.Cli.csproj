@@ -25,7 +25,6 @@
     <Compile Include="..\WledSRServer\Audio\**\*.cs" Link="Audio\%(RecursiveDir)%(Filename)%(Extension)" />
     <!-- NAudio 3.x only ships WASAPI (CoreAudioApi) for -windows TFMs, so these are Windows-only -->
     <Compile Remove="..\WledSRServer\Audio\WasapiAudioCapture.cs" />
-    <Compile Remove="..\WledSRServer\Audio\WasapiLoopbackCaptureEx.cs" />
     <Compile Remove="..\WledSRServer\Audio\AudioDeviceEventWatcher.cs" />
   </ItemGroup>
 

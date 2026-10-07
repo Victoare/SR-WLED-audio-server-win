@@ -177,7 +177,7 @@ namespace WledSRServer.Audio
                 audioDeviceEventWatcher.DefaultDeviceChanged += (flow, role, defaultDeviceId) =>
                 {
                     Debug.WriteLine($"ADEW: DefaultDeviceChanged ({flow}, {role})");
-                    // Only the default render/multimedia device is captured (see WasapiLoopbackCaptureEx.GetDefaultLoopbackCaptureDevice)
+                    // Only the default render/multimedia device is captured (see WasapiAudioCapture.Loopback)
                     if (flow != DataFlow.Render || role != Role.Multimedia)
                         return;
                     if (string.IsNullOrEmpty(Properties.Settings.Default.AudioCaptureDeviceId))
@@ -217,9 +217,9 @@ namespace WledSRServer.Audio
                 {
                     var audioBufferMs = 10; // 25ms seems to be the minimum. Any lower will give the same timing of ~14ms -> (Default Windows timer resolution).
                     if (string.IsNullOrEmpty(deviceId))
-                        return new WasapiAudioCapture(new WasapiLoopbackCaptureEx(audioBufferMillisecondsLength: audioBufferMs));
+                        return WasapiAudioCapture.Loopback(audioBufferMs);
                     else
-                        return new WasapiAudioCapture(new WasapiCapture(new MMDeviceEnumerator().GetDevice(deviceId), false, audioBufferMs));
+                        return WasapiAudioCapture.FromDevice(deviceId, audioBufferMs);
                 }
 #endif
 
